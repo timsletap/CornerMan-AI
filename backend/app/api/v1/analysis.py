@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
-from app.core.exceptions import BadRequestException, NotFoundException
+from app.core.exceptions import BadRequestException, NotFoundException, QuotaExceededException
 from app.models.analysis import AnalysisSession, AnalysisStatus
 from app.models.error_flag import ErrorFlag
 from app.models.feedback import FeedbackRating
@@ -18,6 +18,8 @@ from app.schemas.analysis import (
     FeedbackResponse,
 )
 from app.schemas.common import MessageResponse
+from app.services.usage import check_api_credit_quota, check_upload_quota, increment_upload_count
+from app.tasks.analysis_tasks import run_analysis_pipeline
 
 router = APIRouter(tags=["Analysis"])
 
@@ -40,8 +42,12 @@ def trigger_analysis(
     if not video:
         raise NotFoundException("Video")
 
-    # TODO: Check usage quota via services
-    # TODO: Dispatch Celery task
+    if not check_upload_quota(db, current_user):
+        raise QuotaExceededException("Daily upload limit reached")
+    if not check_api_credit_quota(db, current_user):
+        raise QuotaExceededException("API credit limit reached")
+
+    increment_upload_count(db, current_user.id)
 
     session = AnalysisSession(
         user_id=current_user.id,
@@ -51,6 +57,9 @@ def trigger_analysis(
     db.add(session)
     db.commit()
     db.refresh(session)
+
+    run_analysis_pipeline.delay(str(session.id), str(video.id))
+
     return session
 
 
