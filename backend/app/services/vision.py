@@ -11,6 +11,7 @@ Implements VIS-01 through VIS-07 from the FRD:
 """
 
 import math
+import subprocess
 import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -623,6 +624,27 @@ class VisionPipeline:
 
         cap.release()
         out.release()
+
+        # Transcode from mpeg4 to h264 so browsers can play it
+        h264_path = str(video_dir / f"{self.session_id}_annotated_h264.mp4")
+        try:
+            subprocess.run(
+                [
+                    "ffmpeg", "-y",
+                    "-i", annotated_path,
+                    "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+                    "-movflags", "+faststart",
+                    "-an",
+                    h264_path,
+                ],
+                capture_output=True, timeout=600,
+                check=True,
+            )
+            Path(annotated_path).unlink(missing_ok=True)
+            Path(h264_path).rename(annotated_path)
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+            # Fall back to the mpeg4 version if transcode fails
+            pass
 
         self.annotated_video_path = annotated_path
         return annotated_path
