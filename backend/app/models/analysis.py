@@ -2,7 +2,7 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, Enum, Float, ForeignKey, Integer, Text, func
+from sqlalchemy import DateTime, Enum, Float, ForeignKey, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -40,6 +40,9 @@ class AnalysisSession(Base):
     guard_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     vision_json: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     coach_feedback: Mapped[str | None] = mapped_column(Text, nullable=True)
+    annotated_video_path: Mapped[str | None] = mapped_column(
+        String(1024), nullable=True
+    )
     processing_started_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )

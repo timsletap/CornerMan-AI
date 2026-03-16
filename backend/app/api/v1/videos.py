@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, get_db
+from app.api.deps import get_current_user, get_current_user_from_token_or_query, get_db
 from app.config import settings
 from app.core.exceptions import BadRequestException, NotFoundException
 from app.models.user import User
@@ -121,7 +121,7 @@ def trim_video(
 @router.get("/{video_id}/stream")
 def stream_video(
     video_id: uuid.UUID,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user_from_token_or_query),
     db: Session = Depends(get_db),
 ) -> FileResponse:
     video = (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import type { VideoResponse, AnalysisSessionResponse } from "@/lib/types";
@@ -14,12 +14,33 @@ export default function DashboardPage() {
   const [videos, setVideos] = useState<VideoResponse[]>([]);
   const [sessions, setSessions] = useState<AnalysisSessionResponse[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
+  const fetchData = useCallback(() => {
     Promise.all([api.listVideos(), api.listSessions()])
       .then(([v, s]) => { setVideos(v); setSessions(s); })
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  const handleDeleteSession = async (sessionId: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDeleting((prev) => new Set(prev).add(sessionId));
+    try {
+      await api.deleteSession(sessionId);
+      setSessions((prev) => prev.filter((s) => s.id !== sessionId));
+    } catch {
+      // ignore
+    } finally {
+      setDeleting((prev) => {
+        const next = new Set(prev);
+        next.delete(sessionId);
+        return next;
+      });
+    }
+  };
 
   if (loading) {
     return (
@@ -45,12 +66,24 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {sessions.slice(0, 6).map((s) => (
               <Link key={s.id} href={`/sessions/${s.id}`}>
-                <Card className="hover:border-zinc-600 transition-colors cursor-pointer">
+                <Card className="hover:border-zinc-600 transition-colors cursor-pointer relative group">
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-sm text-zinc-400 font-mono">
                       {new Date(s.created_at).toLocaleDateString()}
                     </p>
-                    <StatusBadge status={s.status} />
+                    <div className="flex items-center gap-2">
+                      <StatusBadge status={s.status} />
+                      {(s.status === "failed" || s.status === "queued" || s.status === "completed") && (
+                        <button
+                          onClick={(e) => handleDeleteSession(s.id, e)}
+                          disabled={deleting.has(s.id)}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity text-zinc-500 hover:text-red-400 text-xs px-1.5 py-0.5 rounded border border-zinc-700 hover:border-red-800"
+                          title="Remove"
+                        >
+                          {deleting.has(s.id) ? "..." : "\u2715"}
+                        </button>
+                      )}
+                    </div>
                   </div>
                   {s.status === "completed" && (
                     <div className="flex items-center gap-4 text-sm">
@@ -59,6 +92,12 @@ export default function DashboardPage() {
                         Guard: {s.guard_score?.toFixed(0) ?? "--"}%
                       </span>
                     </div>
+                  )}
+                  {s.status === "failed" && (
+                    <p className="text-xs text-red-400 mt-1">Analysis failed</p>
+                  )}
+                  {s.status === "queued" && (
+                    <p className="text-xs text-yellow-400 mt-1">Stuck in queue</p>
                   )}
                 </Card>
               </Link>

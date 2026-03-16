@@ -1,5 +1,6 @@
 """YouTube scraping service - download UFC fight clips for analysis."""
 
+import subprocess
 import uuid
 from pathlib import Path
 
@@ -29,11 +30,20 @@ def download_youtube_clip(
     video_id = str(uuid.uuid4())
     upload_dir = Path(settings.VIDEO_UPLOAD_DIR) / f"videos/{user_id}"
     upload_dir.mkdir(parents=True, exist_ok=True)
+    raw_path = upload_dir / f"{video_id}_raw.mp4"
     output_path = upload_dir / f"{video_id}.mp4"
 
+    # Prefer h264 so OpenCV can decode it; fall back to anything available
     ydl_opts = {
-        "format": "best[ext=mp4][height<=720]/best[ext=mp4]/best",
-        "outtmpl": str(output_path),
+        "format": (
+            "bestvideo[vcodec^=avc1][height<=720]+bestaudio[acodec^=mp4a]/"
+            "bestvideo[vcodec^=avc1][height<=720]+bestaudio/"
+            "bestvideo[height<=720]+bestaudio/"
+            "best[height<=720]/"
+            "bestvideo+bestaudio/"
+            "best"
+        ),
+        "outtmpl": str(raw_path),
         "quiet": True,
         "no_warnings": True,
         "merge_output_format": "mp4",
@@ -43,7 +53,7 @@ def download_youtube_clip(
         "postprocessors": [
             {
                 "key": "FFmpegVideoConvertor",
-                "prefered_format": "mp4",
+                "preferedformat": "mp4",
             }
         ],
     }
@@ -57,11 +67,13 @@ def download_youtube_clip(
         duration = info.get("duration", 0)
 
         if duration and duration > max_duration:
-            # Clean up and raise
-            output_path.unlink(missing_ok=True)
+            raw_path.unlink(missing_ok=True)
             raise ValueError(
                 f"Video duration {duration}s exceeds {max_duration}s limit"
             )
+
+    # Always transcode to h264+aac so OpenCV can read it reliably
+    _transcode_to_h264(raw_path, output_path)
 
     file_size = output_path.stat().st_size
     s3_key = f"videos/{user_id}/{video_id}.mp4"
@@ -74,6 +86,29 @@ def download_youtube_clip(
         "s3_key": s3_key,
         "video_id": video_id,
     }
+
+
+def _transcode_to_h264(src: Path, dst: Path) -> None:
+    """Transcode video to h264/aac mp4 for OpenCV compatibility."""
+    cmd = [
+        "ffmpeg", "-y",
+        "-i", str(src),
+        "-c:v", "libx264",
+        "-preset", "fast",
+        "-crf", "23",
+        "-c:a", "aac",
+        "-movflags", "+faststart",
+        str(dst),
+    ]
+    result = subprocess.run(cmd, capture_output=True, timeout=600)
+    if result.returncode != 0:
+        # Fall back: just rename raw file
+        if not dst.exists():
+            src.rename(dst)
+        return
+
+    # Clean up raw file
+    src.unlink(missing_ok=True)
 
 
 def search_youtube_clips(query: str, max_results: int = 10) -> list[dict]:

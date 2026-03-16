@@ -1,9 +1,11 @@
 import uuid
+from pathlib import Path
 
 from fastapi import APIRouter, Depends
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, get_db
+from app.api.deps import get_current_user, get_current_user_from_token_or_query, get_db
 from app.core.exceptions import BadRequestException, NotFoundException, QuotaExceededException
 from app.models.analysis import AnalysisSession, AnalysisStatus
 from app.models.error_flag import ErrorFlag
@@ -16,8 +18,10 @@ from app.schemas.analysis import (
     DisputeRequest,
     FeedbackCreateRequest,
     FeedbackResponse,
+    ProgressResponse,
 )
 from app.schemas.common import MessageResponse
+from app.services.progress import get_progress
 from app.services.usage import check_api_credit_quota, check_upload_quota, increment_upload_count
 from app.tasks.analysis_tasks import run_analysis_pipeline
 
@@ -97,6 +101,92 @@ def get_session(
     if not session:
         raise NotFoundException("Analysis session")
     return session
+
+
+@router.get("/sessions/{session_id}/progress", response_model=ProgressResponse)
+def get_analysis_progress(
+    session_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Get real-time progress for an in-progress analysis."""
+    session = (
+        db.query(AnalysisSession)
+        .filter(
+            AnalysisSession.id == session_id,
+            AnalysisSession.user_id == current_user.id,
+        )
+        .first()
+    )
+    if not session:
+        raise NotFoundException("Analysis session")
+
+    if session.status == AnalysisStatus.COMPLETED:
+        return {"step": "complete", "progress": 1.0, "detail": "Analysis complete!"}
+    if session.status == AnalysisStatus.FAILED:
+        return {"step": "failed", "progress": 0.0, "detail": "Analysis failed."}
+
+    progress = get_progress(str(session_id))
+    if progress:
+        return progress
+    return {"step": "queued", "progress": 0.0, "detail": "Waiting in queue..."}
+
+
+@router.get("/sessions/{session_id}/annotated-stream")
+def stream_annotated_video(
+    session_id: uuid.UUID,
+    current_user: User = Depends(get_current_user_from_token_or_query),
+    db: Session = Depends(get_db),
+) -> FileResponse:
+    """Stream the annotated video with skeleton overlay."""
+    session = (
+        db.query(AnalysisSession)
+        .filter(
+            AnalysisSession.id == session_id,
+            AnalysisSession.user_id == current_user.id,
+        )
+        .first()
+    )
+    if not session:
+        raise NotFoundException("Analysis session")
+    if not session.annotated_video_path:
+        raise NotFoundException("Annotated video")
+    if not Path(session.annotated_video_path).exists():
+        raise NotFoundException("Annotated video file")
+
+    return FileResponse(
+        session.annotated_video_path,
+        media_type="video/mp4",
+        filename=f"cornerman_analysis_{session_id}.mp4",
+    )
+
+
+@router.delete("/sessions/{session_id}", status_code=204)
+def delete_session(
+    session_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> None:
+    """Delete an analysis session and all related data."""
+    session = (
+        db.query(AnalysisSession)
+        .filter(
+            AnalysisSession.id == session_id,
+            AnalysisSession.user_id == current_user.id,
+        )
+        .first()
+    )
+    if not session:
+        raise NotFoundException("Analysis session")
+
+    # Clean up annotated video file if it exists
+    if session.annotated_video_path:
+        p = Path(session.annotated_video_path)
+        if p.exists():
+            p.unlink(missing_ok=True)
+
+    db.delete(session)
+    db.commit()
 
 
 @router.post("/sessions/{session_id}/feedback", response_model=FeedbackResponse)

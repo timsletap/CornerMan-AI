@@ -2,7 +2,13 @@
   "permissions": {
     "allow": [
       "Bash(git config:*)",
-      "Bash(git clean:*)"
+      "Bash(git clean:*)",
+      "Bash(wc:*)",
+      "Bash(docker info:*)",
+      "Skill(gstack)",
+      "Bash(B=~/.claude/skills/gstack/browse/dist/browse\n$B url 2>&1)",
+      "Bash(docker compose:*)",
+      "Bash(find:*)"
     ]
   }
 }

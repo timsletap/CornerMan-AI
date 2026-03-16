@@ -126,15 +126,41 @@ export interface AnalysisSessionResponse {
   avg_velocity: number | null;
   guard_score: number | null;
   coach_feedback: string | null;
+  annotated_video_path: string | null;
   processing_started_at: string | null;
   processing_completed_at: string | null;
   created_at: string;
 }
 
+export interface VisionJson {
+  video_metadata: {
+    fps: number;
+    total_frames: number;
+    duration_seconds: number;
+    resolution: { width: number; height: number };
+  };
+  frames_analyzed: number;
+  metrics: {
+    total_strikes: number;
+    avg_velocity: number;
+    guard_score: number;
+    strikes_per_minute: number;
+    error_counts: Record<string, number>;
+  };
+  annotated_video_path: string | null;
+}
+
 export interface AnalysisSessionDetailResponse extends AnalysisSessionResponse {
+  vision_json: VisionJson | null;
   strike_events: StrikeEventResponse[];
   error_flags: ErrorFlagResponse[];
   drill_recommendations: DrillRecommendationResponse[];
+}
+
+export interface ProgressResponse {
+  step: string;
+  progress: number;
+  detail: string;
 }
 
 export interface CoachingFeedback {

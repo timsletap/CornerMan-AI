@@ -63,6 +63,7 @@ class AnalysisSessionResponse(BaseModel):
     avg_velocity: float | None
     guard_score: float | None
     coach_feedback: str | None
+    annotated_video_path: str | None
     processing_started_at: datetime | None
     processing_completed_at: datetime | None
     created_at: datetime
@@ -71,6 +72,7 @@ class AnalysisSessionResponse(BaseModel):
 
 
 class AnalysisSessionDetailResponse(AnalysisSessionResponse):
+    vision_json: dict[str, Any] | None = None
     strike_events: list[StrikeEventResponse] = []
     error_flags: list[ErrorFlagResponse] = []
     drill_recommendations: list[DrillRecommendationResponse] = []
@@ -93,3 +95,9 @@ class FeedbackResponse(BaseModel):
 
 class DisputeRequest(BaseModel):
     error_flag_id: uuid.UUID
+
+
+class ProgressResponse(BaseModel):
+    step: str
+    progress: float
+    detail: str

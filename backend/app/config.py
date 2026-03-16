@@ -44,10 +44,10 @@ class Settings(BaseSettings):
     STORAGE_BACKEND: str = "local"
 
     # Limits
-    FREE_TIER_DAILY_UPLOADS: int = 3
-    MAX_VIDEO_DURATION_SECONDS: int = 60
-    MAX_VIDEO_SIZE_MB: int = 500
-    API_CREDIT_HOURLY_LIMIT: float = 5.00
+    FREE_TIER_DAILY_UPLOADS: int = 999
+    MAX_VIDEO_DURATION_SECONDS: int = 1800
+    MAX_VIDEO_SIZE_MB: int = 2000
+    API_CREDIT_HOURLY_LIMIT: float = 999.00
     CLAUDE_COST_PER_CALL: float = 0.015
 
     @property

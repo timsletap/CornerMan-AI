@@ -7,11 +7,13 @@ Implements VIS-01 through VIS-07 from the FRD:
 - Telegraph detection (elbow flare in pre-strike frames)
 - Subject isolation (primary actor scoring)
 - Occlusion handling (pause/resume on confidence drops)
+- Annotated video generation with skeleton overlay
 """
 
 import math
 import uuid
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 import cv2
@@ -19,6 +21,7 @@ import numpy as np
 from ultralytics import YOLO
 
 from app.config import settings
+from app.services.progress import update_progress
 
 COCO_KEYPOINTS = {
     0: "nose", 1: "left_eye", 2: "right_eye", 3: "left_ear", 4: "right_ear",
@@ -29,10 +32,44 @@ COCO_KEYPOINTS = {
 
 # Keypoint indices
 NOSE = 0
+LEFT_EYE, RIGHT_EYE = 1, 2
+LEFT_EAR, RIGHT_EAR = 3, 4
 LEFT_SHOULDER, RIGHT_SHOULDER = 5, 6
 LEFT_ELBOW, RIGHT_ELBOW = 7, 8
 LEFT_WRIST, RIGHT_WRIST = 9, 10
 LEFT_HIP, RIGHT_HIP = 11, 12
+LEFT_KNEE, RIGHT_KNEE = 13, 14
+LEFT_ANKLE, RIGHT_ANKLE = 15, 16
+
+# Skeleton connections for drawing
+SKELETON_CONNECTIONS = [
+    (LEFT_SHOULDER, RIGHT_SHOULDER),
+    (LEFT_SHOULDER, LEFT_ELBOW), (LEFT_ELBOW, LEFT_WRIST),
+    (RIGHT_SHOULDER, RIGHT_ELBOW), (RIGHT_ELBOW, RIGHT_WRIST),
+    (LEFT_SHOULDER, LEFT_HIP), (RIGHT_SHOULDER, RIGHT_HIP),
+    (LEFT_HIP, RIGHT_HIP),
+    (LEFT_HIP, LEFT_KNEE), (LEFT_KNEE, LEFT_ANKLE),
+    (RIGHT_HIP, RIGHT_KNEE), (RIGHT_KNEE, RIGHT_ANKLE),
+    (NOSE, LEFT_EYE), (NOSE, RIGHT_EYE),
+    (LEFT_EYE, LEFT_EAR), (RIGHT_EYE, RIGHT_EAR),
+]
+
+# Colors for skeleton (BGR)
+SKELETON_COLOR = (0, 255, 170)          # Neon green
+SKELETON_COLOR_DIM = (0, 180, 120)      # Dimmer green for limbs
+KEYPOINT_COLOR = (0, 200, 255)          # Cyan dots
+STRIKE_FLASH_COLOR = (0, 0, 255)        # Red flash for strikes
+GUARD_LINE_COLOR = (0, 255, 255)        # Yellow for guard distance
+ERROR_COLOR = (0, 50, 255)              # Red-orange for errors
+VELOCITY_COLOR = (255, 100, 0)          # Blue for velocity vectors
+BBOX_COLOR = (100, 100, 100)            # Gray bbox
+
+# HUD colors (BGR)
+HUD_BG = (20, 20, 20)
+HUD_TEXT = (220, 220, 220)
+HUD_ACCENT = (0, 200, 255)
+HUD_RED = (60, 60, 255)
+HUD_GREEN = (60, 220, 60)
 
 
 @dataclass
@@ -70,6 +107,7 @@ class VisionPipeline:
     def __init__(self, video_path: str, session_id: uuid.UUID):
         self.video_path = video_path
         self.session_id = session_id
+        self.session_id_str = str(session_id)
         self.model = YOLO(settings.YOLO_MODEL_NAME)
 
         self.cap: cv2.VideoCapture | None = None
@@ -84,6 +122,10 @@ class VisionPipeline:
 
         self.strikes: list[StrikeDetection] = []
         self.errors: list[ErrorDetection] = []
+
+        # For annotated video: store raw keypoints per frame
+        self._frame_data: dict[int, dict] = {}
+        self.annotated_video_path: str | None = None
 
     def load_video(self) -> None:
         self.cap = cv2.VideoCapture(self.video_path)
@@ -108,6 +150,16 @@ class VisionPipeline:
                 frame_num += 1
                 continue
 
+            # Report progress
+            if frame_num % 10 == 0:
+                pct = frame_num / max(1, self.total_frames)
+                update_progress(
+                    self.session_id_str,
+                    "pose_extraction",
+                    pct * 0.6,  # Pose extraction is 0-60% of total
+                    f"Tracking poses: frame {frame_num}/{self.total_frames}",
+                )
+
             timestamp_ms = int((frame_num / self.fps) * 1000)
             results = self.model(frame, verbose=False)
 
@@ -128,18 +180,28 @@ class VisionPipeline:
                 box = boxes[best_person]
                 bbox_area = float((box[2] - box[0]) * (box[3] - box[1]))
 
+                kp_list = [
+                    (float(kps[i][0]), float(kps[i][1]), float(kps[i][2]))
+                    for i in range(17)
+                ]
+
                 fk = FrameKeypoints(
                     frame_number=frame_num,
                     timestamp_ms=timestamp_ms,
-                    keypoints=[
-                        (float(kps[i][0]), float(kps[i][1]), float(kps[i][2]))
-                        for i in range(17)
-                    ],
+                    keypoints=kp_list,
                     bbox=(float(box[0]), float(box[1]), float(box[2]), float(box[3])),
                     bbox_area=bbox_area,
                 )
                 self.frame_keypoints.append(fk)
                 self.active_frames.add(frame_num)
+
+                # Store for annotated video
+                self._frame_data[frame_num] = {
+                    "keypoints": kp_list,
+                    "bbox": fk.bbox,
+                    "all_keypoints": keypoints_data.tolist(),
+                    "all_boxes": boxes.tolist(),
+                }
 
             frame_num += 1
 
@@ -216,6 +278,13 @@ class VisionPipeline:
         """VIS-02: Detect strike events from wrist velocity spikes."""
         if len(self.frame_keypoints) < 3:
             return
+
+        update_progress(
+            self.session_id_str,
+            "strike_detection",
+            0.65,
+            "Detecting strikes from velocity data...",
+        )
 
         for hand_idx, hand_name in [(LEFT_WRIST, "left"), (RIGHT_WRIST, "right")]:
             velocities: list[tuple[float, float, float]] = []  # (mag, dx, dy)
@@ -347,6 +416,13 @@ class VisionPipeline:
 
     def analyze_guard(self) -> None:
         """VIS-03: Check off-hand guard integrity during each strike."""
+        update_progress(
+            self.session_id_str,
+            "guard_analysis",
+            0.70,
+            "Analyzing guard integrity...",
+        )
+
         for strike_idx, strike in enumerate(self.strikes):
             fk = self._get_frame_keypoints(strike.frame_number)
             if fk is None:
@@ -389,6 +465,13 @@ class VisionPipeline:
 
     def detect_telegraph(self) -> None:
         """VIS-04: Detect elbow flare (chicken wing) in 10 pre-strike frames."""
+        update_progress(
+            self.session_id_str,
+            "telegraph_detection",
+            0.75,
+            "Detecting telegraph patterns...",
+        )
+
         for strike_idx, strike in enumerate(self.strikes):
             elbow_idx = LEFT_ELBOW if strike.hand == "left" else RIGHT_ELBOW
 
@@ -437,6 +520,276 @@ class VisionPipeline:
                     },
                     related_strike_index=strike_idx,
                 ))
+
+    def generate_annotated_video(self) -> str | None:
+        """Generate video with skeleton overlay, strike markers, and HUD stats."""
+        update_progress(
+            self.session_id_str,
+            "rendering",
+            0.78,
+            "Rendering annotated video with tracking overlay...",
+        )
+
+        video_dir = Path(self.video_path).parent
+        annotated_path = str(video_dir / f"{self.session_id}_annotated.mp4")
+
+        cap = cv2.VideoCapture(self.video_path)
+        if not cap.isOpened():
+            return None
+
+        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+        out = cv2.VideoWriter(
+            annotated_path,
+            fourcc,
+            self.fps,
+            (self.frame_width, self.frame_height),
+        )
+
+        # Pre-compute strike and error lookup by frame
+        strike_frames = {s.frame_number: s for s in self.strikes}
+        error_frames: dict[int, list[ErrorDetection]] = {}
+        for e in self.errors:
+            error_frames.setdefault(e.frame_number, []).append(e)
+
+        # Track running stats for HUD
+        strikes_so_far = 0
+        errors_so_far = 0
+        last_strike_type = ""
+        recent_velocity = 0.0
+
+        frame_num = 0
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                break
+
+            # Progress for rendering
+            if frame_num % 30 == 0:
+                render_pct = 0.78 + (frame_num / max(1, self.total_frames)) * 0.12
+                update_progress(
+                    self.session_id_str,
+                    "rendering",
+                    render_pct,
+                    f"Rendering frame {frame_num}/{self.total_frames}",
+                )
+
+            # Check if we have pose data for this frame
+            fd = self._frame_data.get(frame_num)
+            is_strike_frame = frame_num in strike_frames
+            frame_errors = error_frames.get(frame_num, [])
+
+            if is_strike_frame:
+                strikes_so_far += 1
+                s = strike_frames[frame_num]
+                last_strike_type = s.strike_type
+                recent_velocity = s.velocity
+            if frame_errors:
+                errors_so_far += len(frame_errors)
+
+            if fd:
+                kps = fd["keypoints"]
+
+                # Draw skeleton connections
+                self._draw_skeleton(frame, kps, is_strike_frame)
+
+                # Draw keypoint dots
+                self._draw_keypoints(frame, kps, is_strike_frame)
+
+                # Draw bounding box (subtle)
+                bbox = fd["bbox"]
+                x1, y1, x2, y2 = int(bbox[0]), int(bbox[1]), int(bbox[2]), int(bbox[3])
+                box_color = STRIKE_FLASH_COLOR if is_strike_frame else BBOX_COLOR
+                cv2.rectangle(frame, (x1, y1), (x2, y2), box_color, 1)
+
+                # If strike frame: draw velocity vector and flash
+                if is_strike_frame:
+                    self._draw_strike_overlay(frame, strike_frames[frame_num], kps)
+
+                # If error frame: draw guard distance line
+                for err in frame_errors:
+                    self._draw_error_overlay(frame, err, kps)
+
+            # Draw HUD overlay (always)
+            timestamp_s = frame_num / self.fps
+            self._draw_hud(
+                frame, frame_num, timestamp_s,
+                strikes_so_far, errors_so_far,
+                last_strike_type, recent_velocity,
+                fd is not None, is_strike_frame,
+            )
+
+            out.write(frame)
+            frame_num += 1
+
+        cap.release()
+        out.release()
+
+        self.annotated_video_path = annotated_path
+        return annotated_path
+
+    def _draw_skeleton(self, frame: np.ndarray, kps: list, is_strike: bool) -> None:
+        """Draw skeleton lines between connected keypoints."""
+        for i, j in SKELETON_CONNECTIONS:
+            if kps[i][2] < 0.4 or kps[j][2] < 0.4:
+                continue
+            pt1 = (int(kps[i][0]), int(kps[i][1]))
+            pt2 = (int(kps[j][0]), int(kps[j][1]))
+            color = STRIKE_FLASH_COLOR if is_strike else SKELETON_COLOR
+            thickness = 3 if is_strike else 2
+            cv2.line(frame, pt1, pt2, color, thickness, cv2.LINE_AA)
+
+    def _draw_keypoints(self, frame: np.ndarray, kps: list, is_strike: bool) -> None:
+        """Draw keypoint circles with confidence-based sizing."""
+        for i, (x, y, conf) in enumerate(kps):
+            if conf < 0.4:
+                continue
+            radius = max(3, int(conf * 6))
+            color = STRIKE_FLASH_COLOR if is_strike else KEYPOINT_COLOR
+            cv2.circle(frame, (int(x), int(y)), radius, color, -1, cv2.LINE_AA)
+            # Inner white dot for visibility
+            cv2.circle(frame, (int(x), int(y)), max(1, radius - 2), (255, 255, 255), -1, cv2.LINE_AA)
+
+    def _draw_strike_overlay(
+        self, frame: np.ndarray, strike: StrikeDetection, kps: list,
+    ) -> None:
+        """Draw strike indicator: velocity vector, type label, flash border."""
+        wrist_idx = LEFT_WRIST if strike.hand == "left" else RIGHT_WRIST
+        wx, wy = int(kps[wrist_idx][0]), int(kps[wrist_idx][1])
+
+        # Velocity vector arrow
+        scale = 0.3
+        dx = int(strike.velocity_vector[0] * scale)
+        dy = int(strike.velocity_vector[1] * scale)
+        cv2.arrowedLine(
+            frame, (wx, wy), (wx + dx, wy + dy),
+            VELOCITY_COLOR, 3, cv2.LINE_AA, tipLength=0.3,
+        )
+
+        # Strike type label
+        label = f"{strike.strike_type.upper()} {strike.velocity:.1f}u/s"
+        label_y = max(30, wy - 25)
+        self._draw_label(frame, label, (wx - 40, label_y), STRIKE_FLASH_COLOR)
+
+        # Screen flash border
+        h, w = frame.shape[:2]
+        cv2.rectangle(frame, (0, 0), (w - 1, h - 1), STRIKE_FLASH_COLOR, 4)
+
+    def _draw_error_overlay(
+        self, frame: np.ndarray, error: ErrorDetection, kps: list,
+    ) -> None:
+        """Draw error indicators: guard distance line, warning markers."""
+        if error.error_type == "dropped_guard":
+            # Draw line from off-hand wrist to nose showing gap
+            off_hand = error.details.get("off_hand", "left")
+            wrist_idx = LEFT_WRIST if off_hand == "left" else RIGHT_WRIST
+            if kps[wrist_idx][2] >= 0.4 and kps[NOSE][2] >= 0.4:
+                pt_wrist = (int(kps[wrist_idx][0]), int(kps[wrist_idx][1]))
+                pt_nose = (int(kps[NOSE][0]), int(kps[NOSE][1]))
+                cv2.line(frame, pt_wrist, pt_nose, GUARD_LINE_COLOR, 2, cv2.LINE_AA)
+
+                # Distance label
+                mid_x = (pt_wrist[0] + pt_nose[0]) // 2
+                mid_y = (pt_wrist[1] + pt_nose[1]) // 2
+                dist_str = f"GUARD {error.severity.upper()}"
+                self._draw_label(frame, dist_str, (mid_x, mid_y), ERROR_COLOR)
+
+        elif error.error_type == "chicken_wing":
+            # Highlight elbow
+            hand = error.details.get("hand", "right")
+            elbow_idx = LEFT_ELBOW if hand == "left" else RIGHT_ELBOW
+            if kps[elbow_idx][2] >= 0.4:
+                ex, ey = int(kps[elbow_idx][0]), int(kps[elbow_idx][1])
+                cv2.circle(frame, (ex, ey), 20, ERROR_COLOR, 3, cv2.LINE_AA)
+                self._draw_label(frame, "TELEGRAPH", (ex - 30, ey - 25), ERROR_COLOR)
+
+    def _draw_hud(
+        self, frame: np.ndarray, frame_num: int, timestamp_s: float,
+        strikes_count: int, errors_count: int,
+        last_strike: str, velocity: float,
+        tracking_active: bool, is_strike: bool,
+    ) -> None:
+        """Draw heads-up display with stats overlay."""
+        h, w = frame.shape[:2]
+
+        # Top-left: CornerMan branding + timestamp
+        overlay = frame.copy()
+        cv2.rectangle(overlay, (0, 0), (320, 42), HUD_BG, -1)
+        cv2.addWeighted(overlay, 0.7, frame, 0.3, 0, frame)
+
+        cv2.putText(
+            frame, "CORNERMAN AI",
+            (10, 18), cv2.FONT_HERSHEY_SIMPLEX, 0.45, HUD_ACCENT, 1, cv2.LINE_AA,
+        )
+        time_str = f"{int(timestamp_s // 60):02d}:{int(timestamp_s % 60):02d}.{int((timestamp_s % 1) * 10)}"
+        cv2.putText(
+            frame, f"T: {time_str}  F: {frame_num}",
+            (10, 36), cv2.FONT_HERSHEY_SIMPLEX, 0.4, HUD_TEXT, 1, cv2.LINE_AA,
+        )
+
+        # Tracking status indicator
+        status_color = HUD_GREEN if tracking_active else HUD_RED
+        cv2.circle(frame, (300, 20), 6, status_color, -1, cv2.LINE_AA)
+
+        # Top-right: Live stats panel
+        panel_w = 260
+        overlay2 = frame.copy()
+        cv2.rectangle(overlay2, (w - panel_w, 0), (w, 100), HUD_BG, -1)
+        cv2.addWeighted(overlay2, 0.7, frame, 0.3, 0, frame)
+
+        x_start = w - panel_w + 10
+        cv2.putText(
+            frame, f"STRIKES: {strikes_count}",
+            (x_start, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, HUD_ACCENT, 1, cv2.LINE_AA,
+        )
+        cv2.putText(
+            frame, f"ERRORS: {errors_count}",
+            (x_start, 42), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
+            HUD_RED if errors_count > 0 else HUD_TEXT, 1, cv2.LINE_AA,
+        )
+        if last_strike:
+            cv2.putText(
+                frame, f"LAST: {last_strike.upper()}",
+                (x_start, 64), cv2.FONT_HERSHEY_SIMPLEX, 0.45, HUD_TEXT, 1, cv2.LINE_AA,
+            )
+        if velocity > 0:
+            cv2.putText(
+                frame, f"VEL: {velocity:.1f} u/s",
+                (x_start, 86), cv2.FONT_HERSHEY_SIMPLEX, 0.45, VELOCITY_COLOR, 1, cv2.LINE_AA,
+            )
+
+        # Bottom bar: guard score progress
+        guard_score = self.compute_guard_score()
+        bar_h = 6
+        bar_y = h - bar_h - 4
+        bar_w = w - 20
+        # Background
+        cv2.rectangle(frame, (10, bar_y), (10 + bar_w, bar_y + bar_h), (40, 40, 40), -1)
+        # Fill
+        fill_w = int(bar_w * guard_score / 100)
+        bar_color = HUD_GREEN if guard_score >= 80 else (0, 200, 255) if guard_score >= 50 else HUD_RED
+        if fill_w > 0:
+            cv2.rectangle(frame, (10, bar_y), (10 + fill_w, bar_y + bar_h), bar_color, -1)
+        # Label
+        cv2.putText(
+            frame, f"GUARD: {guard_score:.0f}%",
+            (10, bar_y - 6), cv2.FONT_HERSHEY_SIMPLEX, 0.35, bar_color, 1, cv2.LINE_AA,
+        )
+
+    @staticmethod
+    def _draw_label(
+        frame: np.ndarray, text: str, pos: tuple[int, int], color: tuple[int, int, int],
+    ) -> None:
+        """Draw a text label with semi-transparent background."""
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        scale = 0.45
+        thickness = 1
+        (tw, th), _ = cv2.getTextSize(text, font, scale, thickness)
+        x, y = pos
+        # Background
+        overlay = frame.copy()
+        cv2.rectangle(overlay, (x - 2, y - th - 4), (x + tw + 4, y + 4), (0, 0, 0), -1)
+        cv2.addWeighted(overlay, 0.6, frame, 0.4, 0, frame)
+        cv2.putText(frame, text, (x, y), font, scale, color, thickness, cv2.LINE_AA)
 
     def _get_frame_keypoints(self, frame_number: int) -> FrameKeypoints | None:
         """Find FrameKeypoints closest to the given frame number."""
@@ -522,6 +875,7 @@ class VisionPipeline:
                     "chicken_wing": sum(1 for e in self.errors if e.error_type == "chicken_wing"),
                 },
             },
+            "annotated_video_path": self.annotated_video_path,
         }
 
 
@@ -534,4 +888,5 @@ def run_vision_analysis(video_path: str, session_id: uuid.UUID) -> dict[str, Any
     pipeline.detect_strikes()
     pipeline.analyze_guard()
     pipeline.detect_telegraph()
+    pipeline.generate_annotated_video()
     return pipeline.build_output_json()

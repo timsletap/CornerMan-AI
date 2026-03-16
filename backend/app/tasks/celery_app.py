@@ -20,3 +20,7 @@ celery_app.conf.update(
 )
 
 celery_app.autodiscover_tasks(["app.tasks"])
+
+# Ensure task modules are imported so tasks get registered
+import app.tasks.analysis_tasks  # noqa: F401, E402
+import app.tasks.video_tasks  # noqa: F401, E402

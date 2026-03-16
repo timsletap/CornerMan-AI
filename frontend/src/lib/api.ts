@@ -146,6 +146,19 @@ export const api = {
       `/api/v1/sessions/${id}`,
     ),
 
+  getSessionProgress: (id: string) =>
+    request<import("./types").ProgressResponse>(
+      `/api/v1/sessions/${id}/progress`,
+    ),
+
+  getAnnotatedStreamUrl: (sessionId: string) => {
+    const token = getToken();
+    return `${API_BASE}/api/v1/sessions/${sessionId}/annotated-stream${token ? `?token=${token}` : ""}`;
+  },
+
+  deleteSession: (sessionId: string) =>
+    request<void>(`/api/v1/sessions/${sessionId}`, { method: "DELETE" }),
+
   submitFeedback: (sessionId: string, rating: string, comment?: string) =>
     request<import("./types").FeedbackResponse>(
       `/api/v1/sessions/${sessionId}/feedback`,

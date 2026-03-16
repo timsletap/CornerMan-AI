@@ -52,6 +52,26 @@ def generate_coaching_feedback(
     user_profile: dict[str, Any],
 ) -> dict[str, Any]:
     """Generate coaching feedback from vision analysis data. Called from Celery (sync)."""
+    if not settings.ANTHROPIC_API_KEY:
+        metrics = vision_data.get("metrics", {})
+        return {
+            "summary": (
+                f"Detected {metrics.get('total_strikes', 0)} strikes with an average velocity of "
+                f"{metrics.get('avg_velocity', 0):.1f} u/s. Guard score: {metrics.get('guard_score', 100):.0f}%."
+            ),
+            "key_metric": f"Guard Score: {metrics.get('guard_score', 100):.0f}%",
+            "one_thing": "Focus on keeping your guard hand tight to your chin when throwing combinations.",
+            "prescribed_drill": {"error_type": "dropped_guard", "reasoning": "Guard maintenance is fundamental."},
+            "detailed_notes": [
+                f"Total strikes detected: {metrics.get('total_strikes', 0)}",
+                f"Strikes per minute: {metrics.get('strikes_per_minute', 0):.1f}",
+                f"Errors found: {sum(metrics.get('error_counts', {}).values())}",
+            ],
+            "mapped_drills": [],
+            "_usage": {"input_tokens": 0, "output_tokens": 0, "estimated_cost": 0},
+            "_note": "AI coaching unavailable — set ANTHROPIC_API_KEY for full analysis",
+        }
+
     client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
 
     # AGT-01: Build context payload

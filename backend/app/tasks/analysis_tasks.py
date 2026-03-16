@@ -15,6 +15,7 @@ from app.models.usage import UsageTracking
 from app.models.user import User
 from app.models.video import Video
 from app.services.coaching import generate_coaching_feedback
+from app.services.progress import clear_progress, update_progress
 from app.services.video import get_video_path
 from app.services.vision import run_vision_analysis
 from app.tasks.celery_app import celery_app
@@ -84,17 +85,26 @@ def run_analysis_pipeline(self, session_id: str, video_id: str) -> dict:
         session.processing_started_at = datetime.now(timezone.utc)
         db.commit()
 
+        update_progress(session_id, "initializing", 0.0, "Loading video and YOLO model...")
+
         # 2. Resolve video path and run vision pipeline
         video_path = get_video_path(video)
         logger.info("Running vision analysis on %s for session %s", video_path, session_id)
         vision_json = run_vision_analysis(video_path, sid)
 
         # 3. Persist vision results on session
+        update_progress(session_id, "persisting", 0.90, "Saving analysis results...")
+
         metrics = vision_json.get("metrics", {})
         session.vision_json = vision_json
         session.total_strikes = metrics.get("total_strikes", 0)
         session.avg_velocity = metrics.get("avg_velocity", 0.0)
         session.guard_score = metrics.get("guard_score", 100.0)
+
+        # Store annotated video path
+        annotated_path = vision_json.get("annotated_video_path")
+        if annotated_path:
+            session.annotated_video_path = annotated_path
 
         # 4. Persist StrikeEvent rows
         strike_events_data = vision_json.get("strike_events", [])
@@ -142,6 +152,8 @@ def run_analysis_pipeline(self, session_id: str, video_id: str) -> dict:
         db.flush()
 
         # 6. Run coaching agent
+        update_progress(session_id, "coaching", 0.92, "Generating AI coaching feedback...")
+
         user_profile = {
             "stance": user.stance.value if user.stance else "unknown",
             "experience_level": user.experience_level.value if user.experience_level else "unknown",
@@ -155,6 +167,8 @@ def run_analysis_pipeline(self, session_id: str, video_id: str) -> dict:
         session.coach_feedback = json.dumps(coaching_response)
 
         # 8. Create DrillRecommendation rows from mapped_drills
+        update_progress(session_id, "drills", 0.96, "Mapping drill recommendations...")
+
         mapped_drills = coaching_response.get("mapped_drills", [])
         for priority, drill_name in enumerate(mapped_drills):
             drill = db.query(Drill).filter(Drill.name == drill_name).first()
@@ -172,9 +186,13 @@ def run_analysis_pipeline(self, session_id: str, video_id: str) -> dict:
         _update_api_credits(db, user.id, estimated_cost)
 
         # 10. Mark session as completed
+        update_progress(session_id, "complete", 1.0, "Analysis complete!")
+
         session.status = AnalysisStatus.COMPLETED
         session.processing_completed_at = datetime.now(timezone.utc)
         db.commit()
+
+        clear_progress(session_id)
 
         logger.info("Analysis pipeline completed for session %s", session_id)
         return {
@@ -198,6 +216,7 @@ def run_analysis_pipeline(self, session_id: str, video_id: str) -> dict:
         except Exception:
             db.rollback()
 
+        update_progress(session_id, "failed", 0.0, f"Analysis failed: {exc}")
         raise self.retry(exc=exc)
 
     finally:
