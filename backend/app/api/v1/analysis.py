@@ -3,6 +3,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, Depends
 from fastapi.responses import FileResponse
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_current_user_from_token_or_query, get_db
@@ -185,7 +186,11 @@ def delete_session(
         if p.exists():
             p.unlink(missing_ok=True)
 
-    db.delete(session)
+    # Use raw SQL DELETE so DB-level ON DELETE CASCADE handles children
+    db.execute(
+        text("DELETE FROM analysis_sessions WHERE id = :sid"),
+        {"sid": str(session_id)},
+    )
     db.commit()
 
 
