@@ -1,12 +1,24 @@
 """Video service - local/S3 storage, ffprobe validation, and path resolution."""
 
+import io
 import os
+import tempfile
 import uuid
 from pathlib import Path
 
+import boto3
 import ffmpeg
 
 from app.config import settings
+
+
+def _get_s3_client():
+    return boto3.client(
+        "s3",
+        aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+        aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+        region_name=settings.AWS_REGION,
+    )
 
 
 def generate_s3_key(user_id: uuid.UUID, filename: str) -> str:
@@ -29,6 +41,24 @@ def save_video_locally(
     return relative_key, str(full_path.resolve())
 
 
+def save_video_to_s3(
+    file_content: bytes, user_id: uuid.UUID, filename: str
+) -> tuple[str, str]:
+    """Upload video to S3. Returns (s3_key, s3_url)."""
+    s3_key = generate_s3_key(user_id, filename)
+    s3 = _get_s3_client()
+    ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else "mp4"
+    content_type = "video/mp4" if ext == "mp4" else "video/quicktime"
+    s3.upload_fileobj(
+        io.BytesIO(file_content),
+        settings.S3_BUCKET_NAME,
+        s3_key,
+        ExtraArgs={"ContentType": content_type},
+    )
+    s3_url = f"https://{settings.S3_BUCKET_NAME}.s3.{settings.AWS_REGION}.amazonaws.com/{s3_key}"
+    return s3_key, s3_url
+
+
 def save_video(
     file_content: bytes, user_id: uuid.UUID, filename: str
 ) -> tuple[str, str]:
@@ -36,9 +66,7 @@ def save_video(
     if settings.STORAGE_BACKEND == "local":
         return save_video_locally(file_content, user_id, filename)
     else:
-        s3_key = generate_s3_key(user_id, filename)
-        s3_url = f"https://{settings.S3_BUCKET_NAME}.s3.{settings.AWS_REGION}.amazonaws.com/{s3_key}"
-        return s3_key, s3_url
+        return save_video_to_s3(file_content, user_id, filename)
 
 
 def validate_video_file(file_path: str, filename: str) -> dict:
@@ -75,17 +103,34 @@ def validate_video_file(file_path: str, filename: str) -> dict:
     }
 
 
+def download_from_s3(s3_key: str) -> str:
+    """Download a file from S3 to a temp file. Returns the temp file path."""
+    s3 = _get_s3_client()
+    ext = s3_key.rsplit(".", 1)[-1] if "." in s3_key else "mp4"
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=f".{ext}")
+    s3.download_fileobj(settings.S3_BUCKET_NAME, s3_key, tmp)
+    tmp.close()
+    return tmp.name
+
+
 def get_video_path(video) -> str:
     """Resolve the absolute filesystem path for a Video record."""
     if settings.STORAGE_BACKEND == "local":
         return str(Path(settings.VIDEO_UPLOAD_DIR).resolve() / video.s3_key)
     else:
-        raise NotImplementedError("S3 download not yet implemented")
+        return download_from_s3(video.s3_key)
 
 
-def delete_video_file(file_path: str) -> None:
-    """Delete a video file from local storage."""
-    try:
-        os.remove(file_path)
-    except OSError:
-        pass
+def delete_video_file(file_path_or_key: str) -> None:
+    """Delete a video file from local storage or S3."""
+    if settings.STORAGE_BACKEND == "local":
+        try:
+            os.remove(file_path_or_key)
+        except OSError:
+            pass
+    else:
+        try:
+            s3 = _get_s3_client()
+            s3.delete_object(Bucket=settings.S3_BUCKET_NAME, Key=file_path_or_key)
+        except Exception:
+            pass

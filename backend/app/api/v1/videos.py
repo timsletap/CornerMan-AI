@@ -1,6 +1,8 @@
 import uuid
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, UploadFile
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
@@ -9,7 +11,7 @@ from app.core.exceptions import BadRequestException, NotFoundException
 from app.models.user import User
 from app.models.video import Video, VideoStatus
 from app.schemas.video import VideoResponse, VideoTrimRequest, VideoUploadResponse
-from app.services.video import delete_video_file, save_video, validate_video_file
+from app.services.video import delete_video_file, get_video_path, save_video, validate_video_file
 
 router = APIRouter(prefix="/videos", tags=["Videos"])
 
@@ -114,6 +116,30 @@ def trim_video(
     db.commit()
     db.refresh(video)
     return video
+
+
+@router.get("/{video_id}/stream")
+def stream_video(
+    video_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> FileResponse:
+    video = (
+        db.query(Video)
+        .filter(Video.id == video_id, Video.user_id == current_user.id)
+        .first()
+    )
+    if not video:
+        raise NotFoundException("Video")
+    file_path = get_video_path(video)
+    if not Path(file_path).exists():
+        raise NotFoundException("Video file")
+    media_type = "video/mp4" if video.format == "mp4" else "video/quicktime"
+    return FileResponse(
+        file_path,
+        media_type=media_type,
+        filename=video.original_filename,
+    )
 
 
 @router.delete("/{video_id}", status_code=204)
