@@ -20,3 +20,12 @@ eval/labels/*.json
 # Pose caches (fixtures under tests/ are allowed)
 *.parquet
 !tests/**/*.parquet
+
+# Python virtualenv and caches
+.venv/
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
