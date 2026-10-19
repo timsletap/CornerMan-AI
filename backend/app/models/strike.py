@@ -29,9 +29,7 @@ class Hand(str, enum.Enum):
 class StrikeEvent(Base):
     __tablename__ = "strike_events"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     session_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("analysis_sessions.id", ondelete="CASCADE"),
@@ -43,12 +41,8 @@ class StrikeEvent(Base):
     hand: Mapped[Hand] = mapped_column(Enum(Hand))
     velocity: Mapped[float | None] = mapped_column(Float, nullable=True)
     keypoints: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships
     session = relationship("AnalysisSession", back_populates="strike_events")
-    error_flags = relationship(
-        "ErrorFlag", back_populates="strike_event", lazy="selectin"
-    )
+    error_flags = relationship("ErrorFlag", back_populates="strike_event", lazy="selectin")

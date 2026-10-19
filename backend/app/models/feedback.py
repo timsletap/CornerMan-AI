@@ -17,9 +17,7 @@ class Rating(str, enum.Enum):
 class FeedbackRating(Base):
     __tablename__ = "feedback_ratings"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     session_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("analysis_sessions.id", ondelete="CASCADE"),
@@ -32,9 +30,7 @@ class FeedbackRating(Base):
     )
     rating: Mapped[Rating] = mapped_column(Enum(Rating))
     comment: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships
     session = relationship("AnalysisSession", back_populates="feedback_ratings")

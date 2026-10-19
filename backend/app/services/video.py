@@ -26,9 +26,7 @@ def generate_s3_key(user_id: uuid.UUID, filename: str) -> str:
     return f"videos/{user_id}/{uuid.uuid4()}.{ext}"
 
 
-def save_video_locally(
-    file_content: bytes, user_id: uuid.UUID, filename: str
-) -> tuple[str, str]:
+def save_video_locally(file_content: bytes, user_id: uuid.UUID, filename: str) -> tuple[str, str]:
     """Save video to local filesystem. Returns (relative_key, absolute_path)."""
     ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else "mp4"
     relative_key = f"videos/{user_id}/{uuid.uuid4()}.{ext}"
@@ -41,9 +39,7 @@ def save_video_locally(
     return relative_key, str(full_path.resolve())
 
 
-def save_video_to_s3(
-    file_content: bytes, user_id: uuid.UUID, filename: str
-) -> tuple[str, str]:
+def save_video_to_s3(file_content: bytes, user_id: uuid.UUID, filename: str) -> tuple[str, str]:
     """Upload video to S3. Returns (s3_key, s3_url)."""
     s3_key = generate_s3_key(user_id, filename)
     s3 = _get_s3_client()
@@ -59,9 +55,7 @@ def save_video_to_s3(
     return s3_key, s3_url
 
 
-def save_video(
-    file_content: bytes, user_id: uuid.UUID, filename: str
-) -> tuple[str, str]:
+def save_video(file_content: bytes, user_id: uuid.UUID, filename: str) -> tuple[str, str]:
     """Dispatch to local or S3 storage based on config. Returns (key, url/path)."""
     if settings.STORAGE_BACKEND == "local":
         return save_video_locally(file_content, user_id, filename)

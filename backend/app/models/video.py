@@ -22,9 +22,7 @@ class VideoStatus(str, enum.Enum):
 class Video(Base):
     __tablename__ = "videos"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),
@@ -38,15 +36,9 @@ class Video(Base):
     format: Mapped[str] = mapped_column(String(10))  # mp4, mov
     trim_start: Mapped[float | None] = mapped_column(Float, nullable=True)
     trim_end: Mapped[float | None] = mapped_column(Float, nullable=True)
-    status: Mapped[VideoStatus] = mapped_column(
-        Enum(VideoStatus), default=VideoStatus.UPLOADED
-    )
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    status: Mapped[VideoStatus] = mapped_column(Enum(VideoStatus), default=VideoStatus.UPLOADED)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships
     user = relationship("User", back_populates="videos")
-    analysis_sessions = relationship(
-        "AnalysisSession", back_populates="video", lazy="selectin"
-    )
+    analysis_sessions = relationship("AnalysisSession", back_populates="video", lazy="selectin")

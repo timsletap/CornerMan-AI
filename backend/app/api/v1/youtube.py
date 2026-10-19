@@ -49,9 +49,9 @@ def download_clip(
     try:
         result = download_youtube_clip(payload.url, current_user.id)
     except ValueError as e:
-        raise BadRequestException(str(e))
+        raise BadRequestException(str(e)) from e
     except Exception as e:
-        raise BadRequestException(f"Download failed: {str(e)}")
+        raise BadRequestException(f"Download failed: {str(e)}") from e
 
     video = Video(
         user_id=current_user.id,

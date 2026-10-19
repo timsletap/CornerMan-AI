@@ -16,10 +16,14 @@ def check_upload_quota(db: Session, user: User) -> bool:
         return True
 
     today = date.today()
-    usage = db.query(UsageTracking).filter(
-        UsageTracking.user_id == user.id,
-        UsageTracking.date == today,
-    ).first()
+    usage = (
+        db.query(UsageTracking)
+        .filter(
+            UsageTracking.user_id == user.id,
+            UsageTracking.date == today,
+        )
+        .first()
+    )
 
     if not usage:
         return True
@@ -30,10 +34,14 @@ def check_upload_quota(db: Session, user: User) -> bool:
 def check_api_credit_quota(db: Session, user: User) -> bool:
     """LIM-03: Circuit breaker - check if user has exceeded API credit limit."""
     today = date.today()
-    usage = db.query(UsageTracking).filter(
-        UsageTracking.user_id == user.id,
-        UsageTracking.date == today,
-    ).first()
+    usage = (
+        db.query(UsageTracking)
+        .filter(
+            UsageTracking.user_id == user.id,
+            UsageTracking.date == today,
+        )
+        .first()
+    )
 
     if not usage:
         return True
@@ -44,10 +52,14 @@ def check_api_credit_quota(db: Session, user: User) -> bool:
 def increment_upload_count(db: Session, user_id: uuid.UUID) -> None:
     """Increment today's upload count for a user."""
     today = date.today()
-    usage = db.query(UsageTracking).filter(
-        UsageTracking.user_id == user_id,
-        UsageTracking.date == today,
-    ).first()
+    usage = (
+        db.query(UsageTracking)
+        .filter(
+            UsageTracking.user_id == user_id,
+            UsageTracking.date == today,
+        )
+        .first()
+    )
 
     if usage:
         usage.upload_count += 1

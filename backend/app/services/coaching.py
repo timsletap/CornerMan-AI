@@ -61,7 +61,10 @@ def generate_coaching_feedback(
             ),
             "key_metric": f"Guard Score: {metrics.get('guard_score', 100):.0f}%",
             "one_thing": "Focus on keeping your guard hand tight to your chin when throwing combinations.",
-            "prescribed_drill": {"error_type": "dropped_guard", "reasoning": "Guard maintenance is fundamental."},
+            "prescribed_drill": {
+                "error_type": "dropped_guard",
+                "reasoning": "Guard maintenance is fundamental.",
+            },
             "detailed_notes": [
                 f"Total strikes detected: {metrics.get('total_strikes', 0)}",
                 f"Strikes per minute: {metrics.get('strikes_per_minute', 0):.1f}",
@@ -91,8 +94,7 @@ def generate_coaching_feedback(
     }
 
     user_message = (
-        f"{user_context}\n\n"
-        f"Vision Analysis Data:\n{json.dumps(trimmed_vision, indent=2)}"
+        f"{user_context}\n\nVision Analysis Data:\n{json.dumps(trimmed_vision, indent=2)}"
     )
 
     # AGT-02: Call Claude with persona prompt
@@ -111,10 +113,8 @@ def generate_coaching_feedback(
         coaching_response = json.loads(raw_response)
 
         # AGT-03: Deterministic drill mapping overlay
-        prescribed_error_type = (
-            coaching_response
-            .get("prescribed_drill", {})
-            .get("error_type", "other")
+        prescribed_error_type = coaching_response.get("prescribed_drill", {}).get(
+            "error_type", "other"
         )
         drill_names = get_drills_for_error(prescribed_error_type)
         coaching_response["mapped_drills"] = drill_names

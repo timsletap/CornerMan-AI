@@ -7,7 +7,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_current_user_from_token_or_query, get_db
-from app.core.exceptions import BadRequestException, NotFoundException, QuotaExceededException
+from app.core.exceptions import NotFoundException, QuotaExceededException
 from app.models.analysis import AnalysisSession, AnalysisStatus
 from app.models.error_flag import ErrorFlag
 from app.models.feedback import FeedbackRating
@@ -39,11 +39,7 @@ def trigger_analysis(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> AnalysisSession:
-    video = (
-        db.query(Video)
-        .filter(Video.id == video_id, Video.user_id == current_user.id)
-        .first()
-    )
+    video = db.query(Video).filter(Video.id == video_id, Video.user_id == current_user.id).first()
     if not video:
         raise NotFoundException("Video")
 
