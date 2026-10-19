@@ -1,0 +1,22 @@
+# Model weights (Ultralytics downloads YOLO_MODEL_NAME on first use; the Docker image pre-downloads it)
+*.pt
+*.onnx
+*.engine
+
+# Local tool settings
+.claude/
+
+# Secrets
+.env
+
+# Media and user data
+uploads/
+
+# Eval data: clips and real labels stay local; only samples are committed
+eval/clips/
+eval/labels/*.json
+!eval/labels/samples/
+
+# Pose caches (fixtures under tests/ are allowed)
+*.parquet
+!tests/**/*.parquet
