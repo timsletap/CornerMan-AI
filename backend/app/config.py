@@ -1,5 +1,11 @@
 import json
+from typing import Self
+
+from pydantic import model_validator
 from pydantic_settings import BaseSettings
+
+DEFAULT_SECRET_KEY = "change-me-to-a-random-secret-key"
+MIN_SECRET_KEY_BYTES = 32
 
 
 class Settings(BaseSettings):
@@ -10,7 +16,7 @@ class Settings(BaseSettings):
     REDIS_URL: str = "redis://localhost:6379/0"
 
     # JWT
-    SECRET_KEY: str = "change-me-to-a-random-secret-key"
+    SECRET_KEY: str = DEFAULT_SECRET_KEY
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     JWT_ALGORITHM: str = "HS256"
 
@@ -27,7 +33,7 @@ class Settings(BaseSettings):
 
     # Anthropic Claude
     ANTHROPIC_API_KEY: str = ""
-    ANTHROPIC_MODEL: str = "claude-sonnet-4-20250514"
+    ANTHROPIC_MODEL: str = "claude-opus-5-5"
     ANTHROPIC_MAX_TOKENS: int = 1500
 
     # Vision Engine Thresholds
@@ -49,6 +55,20 @@ class Settings(BaseSettings):
     MAX_VIDEO_SIZE_MB: int = 2000
     API_CREDIT_HOURLY_LIMIT: float = 999.00
     CLAUDE_COST_PER_CALL: float = 0.015
+
+    @model_validator(mode="after")
+    def _fail_safe_in_production(self) -> Self:
+        if self.APP_ENV != "production":
+            return self
+        if self.SECRET_KEY == DEFAULT_SECRET_KEY:
+            raise ValueError("SECRET_KEY must be changed from the default in production")
+        if len(self.SECRET_KEY.encode()) < MIN_SECRET_KEY_BYTES:
+            raise ValueError(
+                f"SECRET_KEY must be at least {MIN_SECRET_KEY_BYTES} bytes in production"
+            )
+        if self.DEBUG:
+            raise ValueError("DEBUG must be false in production")
+        return self
 
     @property
     def cors_origins_list(self) -> list[str]:

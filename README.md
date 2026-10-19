@@ -49,7 +49,7 @@ Edit `backend/.env` and configure:
 
 - **`DATABASE_URL`** - Change `localhost` to `db` for Docker: `postgresql://cornerman:cornerman@db:5432/cornerman`
 - **`REDIS_URL`** - Change `localhost` to `redis` for Docker: `redis://redis:6379/0`
-- **`SECRET_KEY`** - Set to a random string for JWT signing
+- **`SECRET_KEY`** - Set to a random string for JWT signing (with `APP_ENV=production` the app refuses to start unless it is at least 32 bytes, not the default, and `DEBUG=false`)
 - **`ANTHROPIC_API_KEY`** - (Optional) Your Anthropic API key for AI coaching. Without it, basic coaching feedback is generated from vision metrics.
 
 ### 3. Start all services
