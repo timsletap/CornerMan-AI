@@ -1,5 +1,7 @@
 # CornerMan AI
 
+[![CI](https://github.com/timsletap/CornerMan-AI/actions/workflows/ci.yml/badge.svg)](https://github.com/timsletap/CornerMan-AI/actions/workflows/ci.yml)
+
 AI-powered MMA and striking analysis platform. Upload fight footage or import from YouTube, and get real-time skeleton tracking, strike detection, guard analysis, and AI coaching feedback.
 
 ## What It Does
@@ -35,7 +37,7 @@ AI-powered MMA and striking analysis platform. Upload fight footage or import fr
 ### 1. Clone the repo
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/CornerMan-AI.git
+git clone https://github.com/timsletap/CornerMan-AI.git
 cd CornerMan-AI
 ```
 

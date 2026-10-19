@@ -24,9 +24,7 @@ class Severity(str, enum.Enum):
 class ErrorFlag(Base):
     __tablename__ = "error_flags"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     session_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("analysis_sessions.id", ondelete="CASCADE"),
@@ -43,9 +41,7 @@ class ErrorFlag(Base):
     severity: Mapped[Severity] = mapped_column(Enum(Severity), default=Severity.MEDIUM)
     details: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     user_disputed: Mapped[bool] = mapped_column(Boolean, default=False)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships
     session = relationship("AnalysisSession", back_populates="error_flags")

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, useCallback, type RefObject } from "react";
+import { useRef, type RefObject } from "react";
 
 interface Props {
   src: string;
@@ -12,24 +12,12 @@ export function VideoPlayer({ src, onTimeUpdate, videoRef: externalRef }: Props)
   const internalRef = useRef<HTMLVideoElement>(null);
   const ref = externalRef || internalRef;
 
-  const handleTimeUpdate = useCallback(() => {
-    if (ref.current && onTimeUpdate) {
-      onTimeUpdate(ref.current.currentTime * 1000);
-    }
-  }, [ref, onTimeUpdate]);
-
-  useEffect(() => {
-    const video = ref.current;
-    if (!video) return;
-    video.addEventListener("timeupdate", handleTimeUpdate);
-    return () => video.removeEventListener("timeupdate", handleTimeUpdate);
-  }, [ref, handleTimeUpdate]);
-
   return (
     <div className="relative rounded-lg overflow-hidden bg-black">
       <video
         ref={ref}
         src={src}
+        onTimeUpdate={(e) => onTimeUpdate?.(e.currentTarget.currentTime * 1000)}
         controls
         playsInline
         className="w-full aspect-video"

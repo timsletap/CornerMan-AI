@@ -68,13 +68,7 @@ def list_videos(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> list[Video]:
-    return (
-        db.query(Video)
-        .filter(Video.user_id == current_user.id)
-        .offset(skip)
-        .limit(limit)
-        .all()
-    )
+    return db.query(Video).filter(Video.user_id == current_user.id).offset(skip).limit(limit).all()
 
 
 @router.get("/{video_id}", response_model=VideoResponse)
@@ -83,11 +77,7 @@ def get_video(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> Video:
-    video = (
-        db.query(Video)
-        .filter(Video.id == video_id, Video.user_id == current_user.id)
-        .first()
-    )
+    video = db.query(Video).filter(Video.id == video_id, Video.user_id == current_user.id).first()
     if not video:
         raise NotFoundException("Video")
     return video
@@ -100,11 +90,7 @@ def trim_video(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> Video:
-    video = (
-        db.query(Video)
-        .filter(Video.id == video_id, Video.user_id == current_user.id)
-        .first()
-    )
+    video = db.query(Video).filter(Video.id == video_id, Video.user_id == current_user.id).first()
     if not video:
         raise NotFoundException("Video")
     if payload.end_time - payload.start_time > settings.MAX_VIDEO_DURATION_SECONDS:
@@ -124,11 +110,7 @@ def stream_video(
     current_user: User = Depends(get_current_user_from_token_or_query),
     db: Session = Depends(get_db),
 ) -> FileResponse:
-    video = (
-        db.query(Video)
-        .filter(Video.id == video_id, Video.user_id == current_user.id)
-        .first()
-    )
+    video = db.query(Video).filter(Video.id == video_id, Video.user_id == current_user.id).first()
     if not video:
         raise NotFoundException("Video")
     file_path = get_video_path(video)
@@ -148,11 +130,7 @@ def delete_video(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> None:
-    video = (
-        db.query(Video)
-        .filter(Video.id == video_id, Video.user_id == current_user.id)
-        .first()
-    )
+    video = db.query(Video).filter(Video.id == video_id, Video.user_id == current_user.id).first()
     if not video:
         raise NotFoundException("Video")
     if video.s3_url:

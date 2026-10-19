@@ -28,7 +28,7 @@ def _resolve_user(token: str, db: Session) -> User:
     try:
         uid = uuid.UUID(user_id)
     except ValueError:
-        raise CredentialsException()
+        raise CredentialsException() from None
     user = db.query(User).filter(User.id == uid).first()
     if user is None:
         raise NotFoundException("User")

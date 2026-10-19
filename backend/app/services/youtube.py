@@ -47,9 +47,9 @@ def download_youtube_clip(
         "quiet": True,
         "no_warnings": True,
         "merge_output_format": "mp4",
-        "match_filter": yt_dlp.utils.match_filter_func(
-            f"duration <= {max_duration}"
-        ) if max_duration else None,
+        "match_filter": yt_dlp.utils.match_filter_func(f"duration <= {max_duration}")
+        if max_duration
+        else None,
         "postprocessors": [
             {
                 "key": "FFmpegVideoConvertor",
@@ -68,9 +68,7 @@ def download_youtube_clip(
 
         if duration and duration > max_duration:
             raw_path.unlink(missing_ok=True)
-            raise ValueError(
-                f"Video duration {duration}s exceeds {max_duration}s limit"
-            )
+            raise ValueError(f"Video duration {duration}s exceeds {max_duration}s limit")
 
     # Always transcode to h264+aac so OpenCV can read it reliably
     _transcode_to_h264(raw_path, output_path)
@@ -91,13 +89,20 @@ def download_youtube_clip(
 def _transcode_to_h264(src: Path, dst: Path) -> None:
     """Transcode video to h264/aac mp4 for OpenCV compatibility."""
     cmd = [
-        "ffmpeg", "-y",
-        "-i", str(src),
-        "-c:v", "libx264",
-        "-preset", "fast",
-        "-crf", "23",
-        "-c:a", "aac",
-        "-movflags", "+faststart",
+        "ffmpeg",
+        "-y",
+        "-i",
+        str(src),
+        "-c:v",
+        "libx264",
+        "-preset",
+        "fast",
+        "-crf",
+        "23",
+        "-c:a",
+        "aac",
+        "-movflags",
+        "+faststart",
         str(dst),
     ]
     result = subprocess.run(cmd, capture_output=True, timeout=600)
@@ -134,12 +139,16 @@ def search_youtube_clips(query: str, max_results: int = 10) -> list[dict]:
         for entry in result["entries"]:
             if entry is None:
                 continue
-            clips.append({
-                "url": entry.get("url", ""),
-                "title": entry.get("title", ""),
-                "duration": entry.get("duration"),
-                "thumbnail": entry.get("thumbnails", [{}])[0].get("url") if entry.get("thumbnails") else None,
-                "channel": entry.get("channel", ""),
-            })
+            clips.append(
+                {
+                    "url": entry.get("url", ""),
+                    "title": entry.get("title", ""),
+                    "duration": entry.get("duration"),
+                    "thumbnail": entry.get("thumbnails", [{}])[0].get("url")
+                    if entry.get("thumbnails")
+                    else None,
+                    "channel": entry.get("channel", ""),
+                }
+            )
 
         return clips

@@ -3,7 +3,7 @@
 import json
 import logging
 import uuid
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 
 from app.config import settings
 from app.database import SessionLocal
@@ -82,7 +82,7 @@ def run_analysis_pipeline(self, session_id: str, video_id: str) -> dict:
 
         # 1. Set status to PROCESSING
         session.status = AnalysisStatus.PROCESSING
-        session.processing_started_at = datetime.now(timezone.utc)
+        session.processing_started_at = datetime.now(UTC)
         db.commit()
 
         update_progress(session_id, "initializing", 0.0, "Loading video and YOLO model...")
@@ -189,7 +189,7 @@ def run_analysis_pipeline(self, session_id: str, video_id: str) -> dict:
         update_progress(session_id, "complete", 1.0, "Analysis complete!")
 
         session.status = AnalysisStatus.COMPLETED
-        session.processing_completed_at = datetime.now(timezone.utc)
+        session.processing_completed_at = datetime.now(UTC)
         db.commit()
 
         clear_progress(session_id)
@@ -207,9 +207,11 @@ def run_analysis_pipeline(self, session_id: str, video_id: str) -> dict:
         logger.exception("Analysis pipeline failed for session %s: %s", session_id, exc)
 
         try:
-            session = db.query(AnalysisSession).filter(
-                AnalysisSession.id == uuid.UUID(session_id)
-            ).first()
+            session = (
+                db.query(AnalysisSession)
+                .filter(AnalysisSession.id == uuid.UUID(session_id))
+                .first()
+            )
             if session:
                 session.status = AnalysisStatus.FAILED
                 db.commit()
@@ -217,7 +219,7 @@ def run_analysis_pipeline(self, session_id: str, video_id: str) -> dict:
             db.rollback()
 
         update_progress(session_id, "failed", 0.0, f"Analysis failed: {exc}")
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
     finally:
         db.close()
@@ -226,10 +228,14 @@ def run_analysis_pipeline(self, session_id: str, video_id: str) -> dict:
 def _update_api_credits(db, user_id: uuid.UUID, cost: float) -> None:
     """Add API credit cost to today's usage tracking record."""
     today = date.today()
-    usage = db.query(UsageTracking).filter(
-        UsageTracking.user_id == user_id,
-        UsageTracking.date == today,
-    ).first()
+    usage = (
+        db.query(UsageTracking)
+        .filter(
+            UsageTracking.user_id == user_id,
+            UsageTracking.date == today,
+        )
+        .first()
+    )
 
     if usage:
         usage.api_credits_consumed += cost

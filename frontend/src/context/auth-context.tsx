@@ -42,6 +42,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const stored = localStorage.getItem("access_token");
     if (stored) {
+      // localStorage is only readable after hydration, so this sync must run in an effect
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setToken(stored);
       refreshUser().finally(() => setLoading(false));
     } else {
