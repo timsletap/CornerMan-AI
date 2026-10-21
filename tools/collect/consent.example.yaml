@@ -1,0 +1,13 @@
+# Consent sheet for footage you recorded yourself. Copy next to your clips and fill in.
+# Use anonymous fighter ids; keep real names and signed consent forms out of the repo.
+recorded_by: owner
+fighters:
+  f01:
+    consent: true          # agreed to recording and use for training and evaluation
+    date: 2026-10-20
+  f02:
+    consent: true
+    date: 2026-10-20
+clips:
+  bag_round1.mp4: [f01]
+  spar_round1.mp4: [f01, f02]
