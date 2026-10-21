@@ -1,8 +1,11 @@
+import json
+import time
 import uuid
+from collections.abc import Iterator
 from pathlib import Path
 
 from fastapi import APIRouter, Depends
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db, require_media_signature
@@ -128,6 +131,81 @@ def get_analysis_progress(
     if progress:
         return progress
     return {"step": "queued", "progress": 0.0, "detail": "Waiting in queue..."}
+
+
+# How often the event stream re-checks progress and status, and when it sends a
+# keepalive comment so proxies don't drop an idle connection (seconds).
+EVENTS_POLL_SECONDS = 0.5
+EVENTS_KEEPALIVE_SECONDS = 15.0
+EVENTS_MAX_SECONDS = 3600.0
+
+
+def _sse(event: str, data: dict) -> str:
+    return f"event: {event}\ndata: {json.dumps(data)}\n\n"
+
+
+def _progress_payload(progress: dict) -> dict:
+    return {
+        "stage": progress.get("step", "queued"),
+        "pct": progress.get("progress", 0.0),
+        "message": progress.get("detail", ""),
+    }
+
+
+def _session_events(session_id: uuid.UUID, db: Session) -> Iterator[str]:
+    """Yield SSE frames until the session completes or fails (PLT-07).
+
+    The DB status is the source of truth for the terminal event; Redis holds the
+    in-flight stage written by the worker.
+    """
+    sid = str(session_id)
+    last: dict | None = None
+    last_sent = started = time.monotonic()
+    try:
+        while time.monotonic() - started < EVENTS_MAX_SECONDS:
+            status = (
+                db.query(AnalysisSession.status).filter(AnalysisSession.id == session_id).scalar()
+            )
+            db.close()  # end the transaction so the next check sees new commits
+            if status is None or status == AnalysisStatus.FAILED:
+                progress = get_progress(sid) or {}
+                yield _sse("failed", {"message": progress.get("detail") or "Analysis failed."})
+                return
+            if status == AnalysisStatus.COMPLETED:
+                yield _sse(
+                    "done", {"stage": "complete", "pct": 1.0, "message": "Analysis complete!"}
+                )
+                return
+
+            payload = _progress_payload(get_progress(sid) or {"detail": "Waiting in queue..."})
+            now = time.monotonic()
+            if payload != last:
+                yield _sse("progress", payload)
+                last, last_sent = payload, now
+            elif now - last_sent >= EVENTS_KEEPALIVE_SECONDS:
+                yield ": keepalive\n\n"
+                last_sent = now
+            time.sleep(EVENTS_POLL_SECONDS)
+    finally:
+        db.close()
+
+
+@router.get(
+    "/sessions/{session_id}/events",
+    dependencies=[Depends(require_media_signature("events", "session_id"))],
+)
+def stream_session_events(
+    session_id: uuid.UUID,
+    db: Session = Depends(get_db),
+) -> StreamingResponse:
+    """Server-sent progress events: `progress` (stage, pct, message), then `done` or
+    `failed`, after which the stream closes. Auth is a signed URL (EventSource can't
+    send headers)."""
+    return StreamingResponse(
+        _session_events(session_id, db),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 @router.get(

@@ -19,6 +19,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { StatusBadge } from "@/components/ui/badge";
 import { AnalysisProgress } from "@/components/analysis/analysis-progress";
 import { useSignedMediaUrl } from "@/lib/hooks/use-signed-media-url";
+import { subscribeToSessionEvents } from "@/lib/session-events";
 
 export default function SessionPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
@@ -35,18 +36,12 @@ export default function SessionPage() {
     "annotated",
     session?.annotated_video_path ? session.id : null,
   );
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
   const fetchSession = useCallback(async () => {
     if (!sessionId) return;
     try {
       const data = await api.getSession(sessionId);
       setSession(data);
       if (data.status === "completed" || data.status === "failed") {
-        if (pollRef.current) {
-          clearInterval(pollRef.current);
-          pollRef.current = null;
-        }
         setProgress(null);
       }
     } catch {
@@ -56,37 +51,22 @@ export default function SessionPage() {
     }
   }, [sessionId]);
 
-  const fetchProgress = useCallback(async () => {
-    if (!sessionId) return;
-    try {
-      const p = await api.getSessionProgress(sessionId);
-      setProgress(p);
-    } catch {
-      // ignore
-    }
-  }, [sessionId]);
-
   useEffect(() => {
     fetchSession();
   }, [fetchSession]);
 
-  // Poll while processing
+  // Live progress over server-sent events while the analysis runs (no polling)
+  const isRunning = session?.status === "queued" || session?.status === "processing";
   useEffect(() => {
-    if (
-      session &&
-      (session.status === "queued" || session.status === "processing")
-    ) {
-      // Fetch progress immediately
-      fetchProgress();
-      pollRef.current = setInterval(() => {
+    if (!sessionId || !isRunning) return;
+    return subscribeToSessionEvents(sessionId, {
+      onProgress: setProgress,
+      onFinished: () => {
+        setProgress(null);
         fetchSession();
-        fetchProgress();
-      }, 1500);
-      return () => {
-        if (pollRef.current) clearInterval(pollRef.current);
-      };
-    }
-  }, [session?.status, fetchSession, fetchProgress]);
+      },
+    });
+  }, [sessionId, isRunning, fetchSession]);
 
   if (loading) {
     return (

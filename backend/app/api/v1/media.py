@@ -24,6 +24,7 @@ router = APIRouter(prefix="/media", tags=["Media"])
 STREAM_PATHS: dict[str, str] = {
     "video": "/api/v1/videos/{id}/stream",
     "annotated": "/api/v1/sessions/{id}/annotated-stream",
+    "events": "/api/v1/sessions/{id}/events",
 }
 
 

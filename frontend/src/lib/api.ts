@@ -156,11 +156,6 @@ export const api = {
       `/api/v1/sessions/${id}`,
     ),
 
-  getSessionProgress: (id: string) =>
-    request<import("./types").ProgressResponse>(
-      `/api/v1/sessions/${id}/progress`,
-    ),
-
   deleteSession: (sessionId: string) =>
     request<void>(`/api/v1/sessions/${sessionId}`, { method: "DELETE" }),
 

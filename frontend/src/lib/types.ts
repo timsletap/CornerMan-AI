@@ -179,7 +179,7 @@ export interface FeedbackResponse {
   created_at: string;
 }
 
-export type MediaResourceType = "video" | "annotated";
+export type MediaResourceType = "video" | "annotated" | "events";
 
 export interface SignedMediaUrlResponse {
   url: string;

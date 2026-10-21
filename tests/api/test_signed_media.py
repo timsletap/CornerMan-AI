@@ -126,6 +126,6 @@ def test_sign_requires_auth(fake_db: MagicMock) -> None:
 
 def test_sign_rejects_unknown_resource_type(client: TestClient) -> None:
     res = client.post(
-        "/api/v1/media/sign", json={"resource_type": "events", "resource_id": str(uuid.uuid4())}
+        "/api/v1/media/sign", json={"resource_type": "thumbnail", "resource_id": str(uuid.uuid4())}
     )
     assert res.status_code == 422

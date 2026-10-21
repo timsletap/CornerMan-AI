@@ -1,4 +1,6 @@
-"""Short-lived signed URLs for media endpoints loaded by <video src> (PLT-03).
+"""Short-lived signed URLs for endpoints the browser loads without headers (PLT-03).
+
+Used by <video src> streams and the EventSource progress stream (PLT-07).
 
 URL params: ``exp`` (unix seconds) and ``sig`` = hex HMAC-SHA256 over
 ``"{resource_type}:{resource_id}:{exp}"``. The key is derived from SECRET_KEY with HKDF
@@ -17,7 +19,7 @@ from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 
 from app.config import settings
 
-MediaResourceType = Literal["video", "annotated"]
+MediaResourceType = Literal["video", "annotated", "events"]
 
 
 @lru_cache(maxsize=4)
