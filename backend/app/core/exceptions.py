@@ -34,6 +34,14 @@ class BadRequestException(HTTPException):
         )
 
 
+class PayloadTooLargeException(HTTPException):
+    def __init__(self, detail: str = "Payload too large") -> None:
+        super().__init__(
+            status_code=413,
+            detail=detail,
+        )
+
+
 class QuotaExceededException(HTTPException):
     def __init__(self, detail: str = "Usage quota exceeded") -> None:
         super().__init__(

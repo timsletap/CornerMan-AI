@@ -161,7 +161,7 @@ Key settings in `backend/.env`:
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `MAX_VIDEO_DURATION_SECONDS` | 1800 | Max video length (30 min) |
-| `MAX_VIDEO_SIZE_MB` | 2000 | Max upload size |
+| `MAX_VIDEO_SIZE_MB` | 500 | Max upload size; larger uploads get 413 |
 | `FREE_TIER_DAILY_UPLOADS` | 999 | Daily analysis limit |
 | `YOLO_MODEL_NAME` | yolov8m-pose.pt | YOLO model variant |
 | `VISION_FRAME_SKIP` | 1 | Analyze every Nth frame |

@@ -7,11 +7,22 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_current_user_from_token_or_query, get_db
 from app.config import settings
-from app.core.exceptions import BadRequestException, NotFoundException
+from app.core.exceptions import (
+    BadRequestException,
+    NotFoundException,
+    PayloadTooLargeException,
+)
 from app.models.user import User
 from app.models.video import Video, VideoStatus
 from app.schemas.video import VideoResponse, VideoTrimRequest, VideoUploadResponse
-from app.services.video import delete_video_file, get_video_path, save_video, validate_video_file
+from app.services.video import (
+    UploadTooLargeError,
+    delete_video_file,
+    get_video_path,
+    store_video,
+    stream_upload_to_temp,
+    validate_video_file,
+)
 
 router = APIRouter(prefix="/videos", tags=["Videos"])
 
@@ -30,20 +41,25 @@ async def upload_video(
     if ext not in ALLOWED_FORMATS:
         raise BadRequestException(f"Invalid format. Allowed: {ALLOWED_FORMATS}")
 
-    content = await file.read()
-    file_size = len(content)
     max_bytes = settings.MAX_VIDEO_SIZE_MB * 1024 * 1024
-    if file_size > max_bytes:
-        raise BadRequestException(f"File exceeds {settings.MAX_VIDEO_SIZE_MB}MB limit")
+    try:
+        temp_path, file_size = await stream_upload_to_temp(file, max_bytes, f".{ext}")
+    except UploadTooLargeError:
+        raise PayloadTooLargeException(
+            f"File exceeds {settings.MAX_VIDEO_SIZE_MB}MB limit"
+        ) from None
 
-    # Save file to storage
-    s3_key, file_url = save_video(content, current_user.id, file.filename)
-
-    # Validate video integrity and duration
-    validation = validate_video_file(file_url, file.filename)
+    # Validate before the file reaches storage so rejected uploads leave nothing behind
+    try:
+        validation = validate_video_file(str(temp_path), file.filename)
+    except Exception:
+        temp_path.unlink(missing_ok=True)
+        raise
     if not validation["valid"]:
-        delete_video_file(file_url)
+        temp_path.unlink(missing_ok=True)
         raise BadRequestException(validation.get("error", "Invalid video file"))
+
+    s3_key, file_url = store_video(temp_path, current_user.id, file.filename)
 
     video = Video(
         user_id=current_user.id,
