@@ -47,6 +47,14 @@ You MUST respond with EXACTLY this JSON structure (no markdown, no code fences, 
 }"""
 
 
+def llm_cost_usd(input_tokens: int, output_tokens: int) -> float:
+    """Cost in USD of one call, from token counts and the configured per-MTok prices."""
+    return (
+        input_tokens * settings.ANTHROPIC_PRICE_INPUT_PER_MTOK / 1e6
+        + output_tokens * settings.ANTHROPIC_PRICE_OUTPUT_PER_MTOK / 1e6
+    )
+
+
 def generate_coaching_feedback(
     vision_data: dict[str, Any],
     user_profile: dict[str, Any],
@@ -71,7 +79,7 @@ def generate_coaching_feedback(
                 f"Errors found: {sum(metrics.get('error_counts', {}).values())}",
             ],
             "mapped_drills": [],
-            "_usage": {"input_tokens": 0, "output_tokens": 0, "estimated_cost": 0},
+            "_usage": {"input_tokens": 0, "output_tokens": 0, "cost_usd": 0.0},
             "_note": "AI coaching unavailable — set ANTHROPIC_API_KEY for full analysis",
         }
 
@@ -99,6 +107,7 @@ def generate_coaching_feedback(
 
     # AGT-02: Call Claude with persona prompt
     raw_response = ""
+    usage: dict[str, Any] = {"input_tokens": 0, "output_tokens": 0, "cost_usd": 0.0}
     try:
         message = client.messages.create(
             model=settings.ANTHROPIC_MODEL,
@@ -106,6 +115,12 @@ def generate_coaching_feedback(
             system=CORNERMAN_SYSTEM_PROMPT,
             messages=[{"role": "user", "content": user_message}],
         )
+        # Record cost before parsing: a response we can't parse is still billed.
+        usage = {
+            "input_tokens": message.usage.input_tokens,
+            "output_tokens": message.usage.output_tokens,
+            "cost_usd": llm_cost_usd(message.usage.input_tokens, message.usage.output_tokens),
+        }
 
         raw_response = message.content[0].text
 
@@ -118,15 +133,7 @@ def generate_coaching_feedback(
         )
         drill_names = get_drills_for_error(prescribed_error_type)
         coaching_response["mapped_drills"] = drill_names
-
-        # Track token usage for cost estimation
-        input_tokens = message.usage.input_tokens
-        output_tokens = message.usage.output_tokens
-        coaching_response["_usage"] = {
-            "input_tokens": input_tokens,
-            "output_tokens": output_tokens,
-            "estimated_cost": (input_tokens * 0.003 + output_tokens * 0.015) / 1000,
-        }
+        coaching_response["_usage"] = usage
 
         return coaching_response
 
@@ -138,6 +145,7 @@ def generate_coaching_feedback(
             "prescribed_drill": None,
             "mapped_drills": [],
             "detailed_notes": [],
+            "_usage": usage,
             "_parse_error": True,
         }
     except anthropic.APIError as e:

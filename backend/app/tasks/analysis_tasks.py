@@ -5,7 +5,6 @@ import logging
 import uuid
 from datetime import UTC, date, datetime
 
-from app.config import settings
 from app.database import SessionLocal
 from app.models.analysis import AnalysisSession, AnalysisStatus
 from app.models.drill import Drill, DrillRecommendation
@@ -182,8 +181,7 @@ def run_analysis_pipeline(self, session_id: str, video_id: str) -> dict:
 
         # 9. Update usage tracking with API credits
         usage_info = coaching_response.get("_usage", {})
-        estimated_cost = usage_info.get("estimated_cost", settings.CLAUDE_COST_PER_CALL)
-        _update_api_credits(db, user.id, estimated_cost)
+        _update_api_credits(db, user.id, float(usage_info.get("cost_usd", 0.0)))
 
         # 10. Mark session as completed
         update_progress(session_id, "complete", 1.0, "Analysis complete!")
