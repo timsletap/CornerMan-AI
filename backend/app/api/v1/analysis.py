@@ -3,10 +3,10 @@ from pathlib import Path
 
 from fastapi import APIRouter, Depends
 from fastapi.responses import FileResponse
-from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db, require_media_signature
+from app.config import settings
 from app.core.exceptions import NotFoundException, QuotaExceededException
 from app.models.analysis import AnalysisSession, AnalysisStatus
 from app.models.error_flag import ErrorFlag
@@ -22,6 +22,7 @@ from app.schemas.analysis import (
     ProgressResponse,
 )
 from app.schemas.common import MessageResponse
+from app.services.cleanup import local_video_path, remove_files, session_files
 from app.services.progress import get_progress
 from app.services.usage import check_api_credit_quota, check_upload_quota, increment_upload_count
 from app.tasks.analysis_tasks import run_analysis_pipeline
@@ -171,18 +172,21 @@ def delete_session(
     if not session:
         raise NotFoundException("Analysis session")
 
-    # Clean up annotated video file if it exists
-    if session.annotated_video_path:
-        p = Path(session.annotated_video_path)
-        if p.exists():
-            p.unlink(missing_ok=True)
+    video = db.query(Video).filter(Video.id == session.video_id).first()
+    video_dir = (
+        local_video_path(video).parent
+        if video is not None and settings.STORAGE_BACKEND == "local"
+        else None
+    )
+    paths = session_files(session, video_dir)
 
-    # Use raw SQL DELETE so DB-level ON DELETE CASCADE handles children
-    db.execute(
-        text("DELETE FROM analysis_sessions WHERE id = :sid"),
-        {"sid": str(session_id)},
+    # Bulk DELETE so Postgres ON DELETE CASCADE removes strikes, flags, drills, feedback
+    db.query(AnalysisSession).filter(AnalysisSession.id == session_id).delete(
+        synchronize_session=False
     )
     db.commit()
+
+    remove_files(paths, f"session {session_id}")
 
 
 @router.post("/sessions/{session_id}/feedback", response_model=FeedbackResponse)

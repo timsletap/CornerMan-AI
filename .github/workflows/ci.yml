@@ -23,6 +23,7 @@ jobs:
           --health-retries 10
     env:
       DATABASE_URL: postgresql://cornerman:cornerman@localhost:5432/cornerman_test
+      TEST_DATABASE_URL: postgresql://cornerman:cornerman@localhost:5432/cornerman_test
       PIP_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cpu  # CPU torch: much smaller than the CUDA wheels
     steps:
       - uses: actions/checkout@v4

@@ -15,9 +15,9 @@ from app.core.exceptions import (
 from app.models.user import User
 from app.models.video import Video, VideoStatus
 from app.schemas.video import VideoResponse, VideoTrimRequest, VideoUploadResponse
+from app.services.cleanup import remove_files, remove_remote_original, video_files
 from app.services.video import (
     UploadTooLargeError,
-    delete_video_file,
     get_video_path,
     store_video,
     stream_upload_to_temp,
@@ -149,10 +149,16 @@ def delete_video(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> None:
+    """Delete a video, all of its analysis data, and every derived file (PLT-10)."""
     video = db.query(Video).filter(Video.id == video_id, Video.user_id == current_user.id).first()
     if not video:
         raise NotFoundException("Video")
-    if video.s3_url:
-        delete_video_file(video.s3_url)
-    db.delete(video)
+    paths = video_files(video, video.analysis_sessions)
+
+    # Bulk DELETE so Postgres ON DELETE CASCADE removes sessions, strikes, flags,
+    # drill recommendations, and feedback.
+    db.query(Video).filter(Video.id == video.id).delete(synchronize_session=False)
     db.commit()
+
+    remove_files(paths, f"video {video_id}")
+    remove_remote_original(video)
