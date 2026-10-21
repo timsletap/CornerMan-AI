@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import type { VideoResponse } from "@/lib/types";
 import { VideoPlayer } from "@/components/video/video-player";
+import { useSignedMediaUrl } from "@/lib/hooks/use-signed-media-url";
 import { Card, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/badge";
@@ -17,6 +18,7 @@ export default function VideoDetailPage() {
   const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
   const [error, setError] = useState("");
+  const stream = useSignedMediaUrl("video", video?.id ?? null);
 
   useEffect(() => {
     if (videoId) {
@@ -55,8 +57,6 @@ export default function VideoDetailPage() {
     return <p className="text-zinc-400">Video not found.</p>;
   }
 
-  const streamUrl = api.getVideoStreamUrl(video.id);
-
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex items-start justify-between">
@@ -89,7 +89,7 @@ export default function VideoDetailPage() {
         </div>
       )}
 
-      <VideoPlayer src={streamUrl} />
+      <VideoPlayer src={stream.url} onSrcError={stream.refreshIfExpired} />
 
       <Card>
         <CardTitle>Video Details</CardTitle>

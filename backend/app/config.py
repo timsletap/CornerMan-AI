@@ -48,6 +48,7 @@ class Settings(BaseSettings):
     # Video Storage
     VIDEO_UPLOAD_DIR: str = "uploads/videos"
     STORAGE_BACKEND: str = "local"
+    MEDIA_URL_TTL_SECONDS: int = 300
 
     # Limits
     FREE_TIER_DAILY_UPLOADS: int = 999

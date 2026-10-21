@@ -1,11 +1,13 @@
 import uuid
-from collections.abc import Generator
+from collections.abc import Callable, Generator
 
-from fastapi import Depends, Query, Request
+from fastapi import Depends, Request
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 
-from app.core.exceptions import CredentialsException, NotFoundException
+from app.core import media_signing
+from app.core.exceptions import CredentialsException, ForbiddenException, NotFoundException
+from app.core.media_signing import MediaResourceType
 from app.core.security import decode_access_token
 from app.database import SessionLocal
 from app.models.user import User
@@ -35,25 +37,31 @@ def _resolve_user(token: str, db: Session) -> User:
     return user
 
 
+def require_media_signature(resource_type: MediaResourceType, id_param: str) -> Callable[..., None]:
+    """Dependency factory: the request must carry a valid ``exp``/``sig`` for the path id.
+
+    Used by endpoints loaded directly by <video src>, which cannot send headers.
+    Ownership is checked when the URL is signed (POST /media/sign).
+    """
+
+    def dependency(request: Request, exp: int | None = None, sig: str | None = None) -> None:
+        try:
+            resource_id = uuid.UUID(request.path_params[id_param])
+        except (KeyError, ValueError):
+            resource_id = None
+        if (
+            resource_id is None
+            or exp is None
+            or sig is None
+            or not media_signing.verify(resource_type, resource_id, exp, sig)
+        ):
+            raise ForbiddenException("Invalid or expired media URL")
+
+    return dependency
+
+
 def get_current_user(
     token: str = Depends(oauth2_scheme),
     db: Session = Depends(get_db),
 ) -> User:
     return _resolve_user(token, db)
-
-
-def get_current_user_from_token_or_query(
-    request: Request,
-    token: str | None = Query(None),
-    db: Session = Depends(get_db),
-) -> User:
-    """Accept token from either Authorization header or ?token= query param.
-    Used for endpoints called directly by <video src=...> tags."""
-    # Try query param first
-    if token:
-        return _resolve_user(token, db)
-    # Fall back to Authorization header
-    auth = request.headers.get("authorization", "")
-    if auth.startswith("Bearer "):
-        return _resolve_user(auth[7:], db)
-    raise CredentialsException()

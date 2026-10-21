@@ -126,9 +126,19 @@ export const api = {
   deleteVideo: (id: string) =>
     request<void>(`/api/v1/videos/${id}`, { method: "DELETE" }),
 
-  getVideoStreamUrl: (id: string) => {
-    const token = getToken();
-    return `${API_BASE}/api/v1/videos/${id}/stream${token ? `?token=${token}` : ""}`;
+  // Media: <video src> can't send headers, so stream URLs are short-lived signed URLs
+  signMediaUrl: async (
+    resourceType: import("./types").MediaResourceType,
+    resourceId: string,
+  ): Promise<{ url: string; expiresAt: number }> => {
+    const res = await request<import("./types").SignedMediaUrlResponse>(
+      "/api/v1/media/sign",
+      {
+        method: "POST",
+        body: JSON.stringify({ resource_type: resourceType, resource_id: resourceId }),
+      },
+    );
+    return { url: `${API_BASE}${res.url}`, expiresAt: Date.parse(res.expires_at) };
   },
 
   // Analysis
@@ -150,11 +160,6 @@ export const api = {
     request<import("./types").ProgressResponse>(
       `/api/v1/sessions/${id}/progress`,
     ),
-
-  getAnnotatedStreamUrl: (sessionId: string) => {
-    const token = getToken();
-    return `${API_BASE}/api/v1/sessions/${sessionId}/annotated-stream${token ? `?token=${token}` : ""}`;
-  },
 
   deleteSession: (sessionId: string) =>
     request<void>(`/api/v1/sessions/${sessionId}`, { method: "DELETE" }),

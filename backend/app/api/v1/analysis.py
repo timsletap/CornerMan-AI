@@ -6,7 +6,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, get_current_user_from_token_or_query, get_db
+from app.api.deps import get_current_user, get_db, require_media_signature
 from app.core.exceptions import NotFoundException, QuotaExceededException
 from app.models.analysis import AnalysisSession, AnalysisStatus
 from app.models.error_flag import ErrorFlag
@@ -129,21 +129,16 @@ def get_analysis_progress(
     return {"step": "queued", "progress": 0.0, "detail": "Waiting in queue..."}
 
 
-@router.get("/sessions/{session_id}/annotated-stream")
+@router.get(
+    "/sessions/{session_id}/annotated-stream",
+    dependencies=[Depends(require_media_signature("annotated", "session_id"))],
+)
 def stream_annotated_video(
     session_id: uuid.UUID,
-    current_user: User = Depends(get_current_user_from_token_or_query),
     db: Session = Depends(get_db),
 ) -> FileResponse:
-    """Stream the annotated video with skeleton overlay."""
-    session = (
-        db.query(AnalysisSession)
-        .filter(
-            AnalysisSession.id == session_id,
-            AnalysisSession.user_id == current_user.id,
-        )
-        .first()
-    )
+    """Stream the annotated video with skeleton overlay. Auth is a signed URL."""
+    session = db.query(AnalysisSession).filter(AnalysisSession.id == session_id).first()
     if not session:
         raise NotFoundException("Analysis session")
     if not session.annotated_video_path:

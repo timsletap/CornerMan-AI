@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, get_current_user_from_token_or_query, get_db
+from app.api.deps import get_current_user, get_db, require_media_signature
 from app.config import settings
 from app.core.exceptions import (
     BadRequestException,
@@ -120,13 +120,16 @@ def trim_video(
     return video
 
 
-@router.get("/{video_id}/stream")
+@router.get(
+    "/{video_id}/stream",
+    dependencies=[Depends(require_media_signature("video", "video_id"))],
+)
 def stream_video(
     video_id: uuid.UUID,
-    current_user: User = Depends(get_current_user_from_token_or_query),
     db: Session = Depends(get_db),
 ) -> FileResponse:
-    video = db.query(Video).filter(Video.id == video_id, Video.user_id == current_user.id).first()
+    """Stream the original video. Auth is a signed URL from POST /media/sign."""
+    video = db.query(Video).filter(Video.id == video_id).first()
     if not video:
         raise NotFoundException("Video")
     file_path = get_video_path(video)

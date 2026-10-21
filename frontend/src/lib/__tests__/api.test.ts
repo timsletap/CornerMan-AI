@@ -29,4 +29,24 @@ describe("api client", () => {
 
     await expect(api.getMe()).rejects.toThrow("Not found");
   });
+
+  it("signs media URLs via POST and returns an absolute URL with no token", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse(200, {
+        url: "/api/v1/videos/v1/stream?exp=2000000000&sig=abc",
+        expires_at: "2033-05-18T03:33:20Z",
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const signed = await api.signMediaUrl("video", "v1");
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toMatch(/\/api\/v1\/media\/sign$/);
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(init.body)).toEqual({ resource_type: "video", resource_id: "v1" });
+    expect(signed.url).toMatch(/^https?:\/\/.+\/api\/v1\/videos\/v1\/stream\?exp=2000000000&sig=abc$/);
+    expect(signed.url).not.toContain("token");
+    expect(signed.expiresAt).toBe(2_000_000_000_000);
+  });
 });
