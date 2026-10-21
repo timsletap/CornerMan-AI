@@ -3,7 +3,7 @@ PY ?= $(firstword $(wildcard .venv/bin/python .venv/Scripts/python.exe) python)
 SPLIT ?= dev
 
 # Packages held to mypy --strict (FRD section 0). Only those that exist are checked.
-STRICT_PACKAGES := $(wildcard backend/app/vision backend/app/coaching eval perf)
+STRICT_PACKAGES := $(wildcard backend/app/vision backend/app/coaching eval perf tools)
 
 .PHONY: check lint lint-backend lint-frontend typecheck typecheck-backend typecheck-frontend test test-backend test-frontend eval golden-update bench
 
@@ -12,8 +12,8 @@ check: lint typecheck test
 lint: lint-backend lint-frontend
 
 lint-backend:
-	$(PY) -m ruff check backend eval tests
-	$(PY) -m ruff format --check backend eval tests
+	$(PY) -m ruff check backend eval tools tests
+	$(PY) -m ruff format --check backend eval tools tests
 
 lint-frontend:
 	cd frontend && npm run lint
@@ -33,7 +33,7 @@ typecheck-frontend:
 test: test-backend test-frontend
 
 test-backend:
-	$(PY) -m pytest --cov=backend/app --cov=eval --cov-report=term-missing:skip-covered
+	$(PY) -m pytest --cov=backend/app --cov=eval --cov=tools --cov-report=term-missing:skip-covered
 
 test-frontend:
 	cd frontend && npx vitest run

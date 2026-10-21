@@ -154,6 +154,29 @@ CornerMan-AI/
 7. **AI Coaching** - Claude analyzes the vision JSON with a corner-coach persona
 8. **Drill Mapping** - Error types mapped to training drills deterministically
 
+## Collecting Eval and Training Clips
+
+`tools/collect` gathers footage that is legal to use and annotate: Wikimedia Commons,
+Internet Archive, and (optionally) Creative Commons YouTube, plus your own recordings
+with a per-fighter consent sheet. It keeps public domain, CC0, CC BY, and CC BY-SA;
+NonCommercial only with `--allow-nc`; never NoDerivatives. Clips that are edited (scene
+cuts), portrait, under 480p, or under 24 fps are rejected.
+
+```bash
+pip install -r backend/requirements-dev.txt
+python -m tools.collect search --source wikimedia --query "boxing heavy bag"
+python -m tools.collect fetch  --source wikimedia --query "boxing heavy bag" --limit 10
+python -m tools.collect local  ~/Videos/gym --consent ~/Videos/gym/consent.yaml
+python -m tools.collect credits --out eval/CREDITS.md
+```
+
+Accepted clips go to `eval/clips/` with provenance (source, license, creator, SHA-256) in
+`eval/clips/manifest.jsonl`; neither is committed. Copy
+`tools/collect/consent.example.yaml` for your own footage. The YouTube source needs
+`YOUTUBE_API_KEY` in the environment, and YouTube's terms restrict downloading even CC
+videos, so prefer the other sources. Scraping copyrighted fight footage (UFC, broadcast
+clips, TikTok) is out of scope.
+
 ## Configuration
 
 Key settings in `backend/.env`:

@@ -6,3 +6,4 @@ mypy==2.4.0
 types-python-jose==3.5.0.20260408
 types-passlib==1.7.7.20260211
 types-PyYAML==6.0.12.20260906
+truststore==0.10.5
