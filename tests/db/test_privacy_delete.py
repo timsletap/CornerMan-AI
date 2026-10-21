@@ -2,90 +2,21 @@
 
 import uuid
 from collections.abc import Callable
-from dataclasses import dataclass, field
-from pathlib import Path
+from typing import Any
 
 from fastapi.testclient import TestClient
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models.analysis import AnalysisSession, AnalysisStatus
-from app.models.error_flag import ErrorFlag, ErrorType
-from app.models.feedback import FeedbackRating, Rating
-from app.models.strike import Hand, StrikeEvent, StrikeType
+from app.models.analysis import AnalysisSession
+from app.models.error_flag import ErrorFlag
+from app.models.feedback import FeedbackRating
+from app.models.strike import StrikeEvent
 from app.models.user import User
-from app.models.video import Video, VideoStatus
+from app.models.video import Video
 
 MakeUser = Callable[..., tuple[User, dict[str, str]]]
-
-
-@dataclass
-class Seeded:
-    video: Video
-    sessions: list[AnalysisSession]
-    files: list[Path] = field(default_factory=list)
-
-
-def touch(path: Path) -> Path:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(b"data")
-    return path
-
-
-def seed_video(db: Session, user: User, upload_dir: Path, n_sessions: int = 2) -> Seeded:
-    """A video on disk with analysed sessions, strikes, flags, feedback, and leftovers."""
-    vid = uuid.uuid4()
-    key = f"videos/{user.id}/{vid}.mp4"
-    original = touch(upload_dir / key)
-    video = Video(
-        id=vid,
-        user_id=user.id,
-        original_filename="spar.mp4",
-        s3_key=key,
-        s3_url=str(original.resolve()),
-        file_size_bytes=4,
-        format="mp4",
-        status=VideoStatus.COMPLETED,
-    )
-    db.add(video)
-    seeded = Seeded(video=video, sessions=[], files=[original])
-    seeded.files.append(touch(original.with_name(f"{vid}_raw.mp4")))  # YouTube leftover
-
-    for _ in range(n_sessions):
-        sid = uuid.uuid4()
-        annotated = touch(original.with_name(f"{sid}_annotated.mp4"))
-        seeded.files += [annotated, touch(original.with_name(f"{sid}_annotated_h264.mp4"))]
-        session = AnalysisSession(
-            id=sid,
-            user_id=user.id,
-            video_id=vid,
-            status=AnalysisStatus.COMPLETED,
-            annotated_video_path=str(annotated.resolve()),
-        )
-        db.add(session)
-        db.flush()
-        strike = StrikeEvent(
-            session_id=sid,
-            timestamp_ms=1000,
-            frame_number=30,
-            strike_type=StrikeType.JAB,
-            hand=Hand.LEFT,
-        )
-        db.add(strike)
-        db.flush()
-        db.add(
-            ErrorFlag(
-                session_id=sid,
-                strike_event_id=strike.id,
-                error_type=ErrorType.DROPPED_GUARD,
-                timestamp_ms=1000,
-                frame_number=30,
-            )
-        )
-        db.add(FeedbackRating(session_id=sid, user_id=user.id, rating=Rating.THUMBS_UP))
-        seeded.sessions.append(session)
-    db.commit()
-    return seeded
+SeedVideo = Callable[..., Any]
 
 
 def count(db: Session, model: type, **filters: object) -> int:
@@ -104,11 +35,11 @@ def rows_for_video(db: Session, video_id: uuid.UUID, session_ids: list[uuid.UUID
 
 
 def test_delete_video_removes_all_rows_and_files(
-    db: Session, db_client: TestClient, make_user: MakeUser, upload_dir: Path
+    db: Session, db_client: TestClient, make_user: MakeUser, seed_video: SeedVideo
 ) -> None:
     user, headers = make_user()
-    doomed = seed_video(db, user, upload_dir)
-    keeper = seed_video(db, user, upload_dir, n_sessions=1)
+    doomed = seed_video(user)
+    keeper = seed_video(user, n_sessions=1)
     doomed_id, doomed_sids = doomed.video.id, [s.id for s in doomed.sessions]
     keeper_id, keeper_sids = keeper.video.id, [s.id for s in keeper.sessions]
     assert rows_for_video(db, doomed_id, doomed_sids) == 9
@@ -124,10 +55,10 @@ def test_delete_video_removes_all_rows_and_files(
 
 
 def test_delete_session_removes_only_its_rows_and_files(
-    db: Session, db_client: TestClient, make_user: MakeUser, upload_dir: Path
+    db: Session, db_client: TestClient, make_user: MakeUser, seed_video: SeedVideo
 ) -> None:
     user, headers = make_user()
-    seeded = seed_video(db, user, upload_dir)
+    seeded = seed_video(user)
     target_id, other_id = (s.id for s in seeded.sessions)
     video_id = seeded.video.id
     original, raw = seeded.files[0], seeded.files[1]
@@ -148,11 +79,11 @@ def test_delete_session_removes_only_its_rows_and_files(
 
 
 def test_other_user_cannot_delete(
-    db: Session, db_client: TestClient, make_user: MakeUser, upload_dir: Path
+    db: Session, db_client: TestClient, make_user: MakeUser, seed_video: SeedVideo
 ) -> None:
     owner, _ = make_user()
     _, intruder_headers = make_user()
-    seeded = seed_video(db, owner, upload_dir)
+    seeded = seed_video(owner)
 
     video_res = db_client.delete(f"/api/v1/videos/{seeded.video.id}", headers=intruder_headers)
     session_res = db_client.delete(
