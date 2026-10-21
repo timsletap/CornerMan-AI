@@ -12,8 +12,8 @@ check: lint typecheck test
 lint: lint-backend lint-frontend
 
 lint-backend:
-	$(PY) -m ruff check backend tests
-	$(PY) -m ruff format --check backend tests
+	$(PY) -m ruff check backend eval tests
+	$(PY) -m ruff format --check backend eval tests
 
 lint-frontend:
 	cd frontend && npm run lint
@@ -33,7 +33,7 @@ typecheck-frontend:
 test: test-backend test-frontend
 
 test-backend:
-	$(PY) -m pytest --cov=backend/app --cov-report=term-missing:skip-covered
+	$(PY) -m pytest --cov=backend/app --cov=eval --cov-report=term-missing:skip-covered
 
 test-frontend:
 	cd frontend && npx vitest run

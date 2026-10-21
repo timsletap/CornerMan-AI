@@ -17,4 +17,5 @@ opencv-python-headless==4.10.0.84
 numpy==1.26.4
 anthropic==0.42.0
 ffmpeg-python==0.2.0
+PyYAML==6.0.3
 yt-dlp>=2025.3.15

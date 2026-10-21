@@ -1,0 +1,6 @@
+# Clip assignment for the eval set (FRD 6.5). Split by fighter: no fighter in both dev and test.
+# Validate with: python -m eval.schema validate-splits eval/splits.yaml --labels-dir eval/labels
+dev: []
+test: []
+seed: []      # 5 clips used as the DATA-01 starting set (subset of dev)
+fighters: {}  # clip_id -> anonymous fighter id, e.g. spar_2026_10_22_a: F01
