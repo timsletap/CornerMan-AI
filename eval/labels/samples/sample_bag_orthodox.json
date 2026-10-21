@@ -1,0 +1,19 @@
+{
+  "clip_id": "sample_bag_orthodox",
+  "fps": 30,
+  "tags": ["bag", "near", "side", "indoor"],
+  "fighter": {"stance": "orthodox", "track_hint": "only person in frame"},
+  "strikes": [
+    {"t_ms": 1200, "hand": "left", "type": "jab", "target": "head"},
+    {"t_ms": 1530, "hand": "right", "type": "cross", "target": "head"},
+    {"t_ms": 2400, "hand": "left", "type": "hook", "target": "head"},
+    {"t_ms": 3900, "hand": "right", "type": "body_shot", "target": "body"}
+  ],
+  "errors": [
+    {"t_ms": 1530, "type": "dropped_guard", "hand": "left"},
+    {"t_ms": 2400, "type": "chicken_wing", "hand": "left"}
+  ],
+  "notes": [],
+  "labeler": "owner",
+  "label_version": 1
+}
