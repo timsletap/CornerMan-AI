@@ -178,3 +178,10 @@ export interface FeedbackResponse {
   comment: string | null;
   created_at: string;
 }
+
+export type MediaResourceType = "video" | "annotated";
+
+export interface SignedMediaUrlResponse {
+  url: string;
+  expires_at: string;
+}

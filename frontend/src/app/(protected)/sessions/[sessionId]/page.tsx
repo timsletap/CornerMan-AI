@@ -18,6 +18,7 @@ import { Card, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { StatusBadge } from "@/components/ui/badge";
 import { AnalysisProgress } from "@/components/analysis/analysis-progress";
+import { useSignedMediaUrl } from "@/lib/hooks/use-signed-media-url";
 
 export default function SessionPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
@@ -29,6 +30,11 @@ export default function SessionPage() {
   const [progress, setProgress] = useState<ProgressResponse | null>(null);
   const [showAnnotated, setShowAnnotated] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const originalStream = useSignedMediaUrl("video", session?.video_id ?? null);
+  const annotatedStream = useSignedMediaUrl(
+    "annotated",
+    session?.annotated_video_path ? session.id : null,
+  );
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchSession = useCallback(async () => {
@@ -141,13 +147,9 @@ export default function SessionPage() {
     );
   }
 
-  const streamUrl = api.getVideoStreamUrl(session.video_id);
-  const annotatedUrl = session.annotated_video_path
-    ? api.getAnnotatedStreamUrl(session.id)
-    : null;
-
-  const activeVideoUrl =
-    showAnnotated && annotatedUrl ? annotatedUrl : streamUrl;
+  const hasAnnotated = Boolean(session.annotated_video_path);
+  const activeStream =
+    showAnnotated && hasAnnotated ? annotatedStream : originalStream;
 
   // Compute extra stats from vision_json
   const vj = session.vision_json;
@@ -228,7 +230,7 @@ export default function SessionPage() {
         {/* Left: Video */}
         <div className="lg:sticky lg:top-20 lg:self-start space-y-3">
           {/* Video toggle */}
-          {annotatedUrl && (
+          {hasAnnotated && (
             <div className="flex gap-2">
               <button
                 onClick={() => setShowAnnotated(true)}
@@ -254,12 +256,13 @@ export default function SessionPage() {
           )}
 
           <VideoPlayer
-            src={activeVideoUrl}
+            src={activeStream.url}
+            onSrcError={activeStream.refreshIfExpired}
             videoRef={videoRef}
             onTimeUpdate={setCurrentTimeMs}
           />
 
-          {showAnnotated && annotatedUrl && (
+          {showAnnotated && hasAnnotated && (
             <p className="text-[10px] text-zinc-600 text-center">
               Skeleton tracking, strike detection & guard analysis overlay
             </p>
