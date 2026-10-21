@@ -9,6 +9,7 @@ from app.core.exceptions import BadRequestException
 from app.models.user import User
 from app.models.video import Video, VideoStatus
 from app.schemas.video import VideoResponse
+from app.services.video import delete_video_file, validate_video_file
 from app.services.youtube import download_youtube_clip, search_youtube_clips
 
 router = APIRouter(prefix="/youtube", tags=["YouTube"])
@@ -53,13 +54,19 @@ def download_clip(
     except Exception as e:
         raise BadRequestException(f"Download failed: {str(e)}") from e
 
+    # Same content check as uploads: must be a real video within the duration limit
+    validation = validate_video_file(result["path"], result["filename"])
+    if not validation["valid"]:
+        delete_video_file(result["path"])
+        raise BadRequestException(validation.get("error", "Invalid video file"))
+
     video = Video(
         user_id=current_user.id,
         original_filename=result["filename"],
         s3_key=result["s3_key"],
         s3_url=result["path"],
         file_size_bytes=result["file_size_bytes"],
-        duration_seconds=result["duration"],
+        duration_seconds=validation.get("duration_seconds", result["duration"]),
         format="mp4",
         status=VideoStatus.VALIDATED,
     )
