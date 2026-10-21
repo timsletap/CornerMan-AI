@@ -305,9 +305,11 @@ def dispute_error(
 ) -> dict:
     error_flag = (
         db.query(ErrorFlag)
+        .join(AnalysisSession, AnalysisSession.id == ErrorFlag.session_id)
         .filter(
             ErrorFlag.id == payload.error_flag_id,
             ErrorFlag.session_id == session_id,
+            AnalysisSession.user_id == current_user.id,
         )
         .first()
     )
