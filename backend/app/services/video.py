@@ -1,6 +1,5 @@
 """Video service - local/S3 storage, ffprobe validation, and path resolution."""
 
-import io
 import os
 import tempfile
 import uuid
@@ -8,6 +7,7 @@ from pathlib import Path
 
 import boto3
 import ffmpeg
+from fastapi import UploadFile
 
 from app.config import settings
 
@@ -26,41 +26,68 @@ def generate_s3_key(user_id: uuid.UUID, filename: str) -> str:
     return f"videos/{user_id}/{uuid.uuid4()}.{ext}"
 
 
-def save_video_locally(file_content: bytes, user_id: uuid.UUID, filename: str) -> tuple[str, str]:
-    """Save video to local filesystem. Returns (relative_key, absolute_path)."""
-    ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else "mp4"
-    relative_key = f"videos/{user_id}/{uuid.uuid4()}.{ext}"
-
-    upload_dir = Path(settings.VIDEO_UPLOAD_DIR)
-    full_path = upload_dir / relative_key
-    full_path.parent.mkdir(parents=True, exist_ok=True)
-
-    full_path.write_bytes(file_content)
-    return relative_key, str(full_path.resolve())
+UPLOAD_CHUNK_BYTES = 1024 * 1024
 
 
-def save_video_to_s3(file_content: bytes, user_id: uuid.UUID, filename: str) -> tuple[str, str]:
-    """Upload video to S3. Returns (s3_key, s3_url)."""
-    s3_key = generate_s3_key(user_id, filename)
-    s3 = _get_s3_client()
-    ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else "mp4"
-    content_type = "video/mp4" if ext == "mp4" else "video/quicktime"
-    s3.upload_fileobj(
-        io.BytesIO(file_content),
-        settings.S3_BUCKET_NAME,
-        s3_key,
-        ExtraArgs={"ContentType": content_type},
-    )
-    s3_url = f"https://{settings.S3_BUCKET_NAME}.s3.{settings.AWS_REGION}.amazonaws.com/{s3_key}"
-    return s3_key, s3_url
+class UploadTooLargeError(Exception):
+    """Raised when an upload stream exceeds the size limit."""
 
 
-def save_video(file_content: bytes, user_id: uuid.UUID, filename: str) -> tuple[str, str]:
-    """Dispatch to local or S3 storage based on config. Returns (key, url/path)."""
+async def stream_upload_to_temp(file: UploadFile, max_bytes: int, suffix: str) -> tuple[Path, int]:
+    """Copy an upload to a temp file under VIDEO_UPLOAD_DIR in 1 MB chunks.
+
+    Args:
+        file: the incoming upload.
+        max_bytes: size limit in bytes; exceeding it deletes the temp file and raises
+            UploadTooLargeError.
+        suffix: file extension for the temp file, e.g. ".mp4".
+
+    Returns (temp_path, size_in_bytes). The temp file lives on the same filesystem as
+    the final location so store_video can rename it atomically.
+    """
+    tmp_dir = Path(settings.VIDEO_UPLOAD_DIR) / "tmp"
+    tmp_dir.mkdir(parents=True, exist_ok=True)
+    fd, name = tempfile.mkstemp(dir=tmp_dir, suffix=f"{suffix}.part")
+    temp_path = Path(name)
+    size = 0
+    try:
+        with os.fdopen(fd, "wb") as out:
+            while chunk := await file.read(UPLOAD_CHUNK_BYTES):
+                size += len(chunk)
+                if size > max_bytes:
+                    raise UploadTooLargeError(f"upload exceeds {max_bytes} bytes")
+                out.write(chunk)
+    except BaseException:
+        temp_path.unlink(missing_ok=True)
+        raise
+    return temp_path, size
+
+
+def store_video(temp_path: Path, user_id: uuid.UUID, filename: str) -> tuple[str, str]:
+    """Move a validated temp file into storage. Returns (key, url/path).
+
+    Local storage uses an atomic rename; S3 uploads from disk and removes the temp file.
+    """
+    key = generate_s3_key(user_id, filename)
     if settings.STORAGE_BACKEND == "local":
-        return save_video_locally(file_content, user_id, filename)
-    else:
-        return save_video_to_s3(file_content, user_id, filename)
+        full_path = Path(settings.VIDEO_UPLOAD_DIR) / key
+        full_path.parent.mkdir(parents=True, exist_ok=True)
+        os.replace(temp_path, full_path)
+        return key, str(full_path.resolve())
+
+    ext = key.rsplit(".", 1)[-1]
+    content_type = "video/mp4" if ext == "mp4" else "video/quicktime"
+    try:
+        _get_s3_client().upload_file(
+            str(temp_path),
+            settings.S3_BUCKET_NAME,
+            key,
+            ExtraArgs={"ContentType": content_type},
+        )
+    finally:
+        temp_path.unlink(missing_ok=True)
+    s3_url = f"https://{settings.S3_BUCKET_NAME}.s3.{settings.AWS_REGION}.amazonaws.com/{key}"
+    return key, s3_url
 
 
 def validate_video_file(file_path: str, filename: str) -> dict:
