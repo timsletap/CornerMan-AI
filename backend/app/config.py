@@ -35,6 +35,9 @@ class Settings(BaseSettings):
     ANTHROPIC_API_KEY: str = ""
     ANTHROPIC_MODEL: str = "claude-opus-5-5"
     ANTHROPIC_MAX_TOKENS: int = 1500
+    # USD per million tokens for ANTHROPIC_MODEL; update both when changing the model
+    ANTHROPIC_PRICE_INPUT_PER_MTOK: float = 4.00
+    ANTHROPIC_PRICE_OUTPUT_PER_MTOK: float = 20.00
 
     # Vision Engine Thresholds
     STRIKE_VELOCITY_THRESHOLD: float = 15.0
@@ -55,7 +58,6 @@ class Settings(BaseSettings):
     MAX_VIDEO_DURATION_SECONDS: int = 1800
     MAX_VIDEO_SIZE_MB: int = 500
     API_CREDIT_HOURLY_LIMIT: float = 999.00
-    CLAUDE_COST_PER_CALL: float = 0.015
 
     @model_validator(mode="after")
     def _fail_safe_in_production(self) -> Self:
