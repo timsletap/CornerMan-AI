@@ -169,6 +169,8 @@ export interface CoachingFeedback {
   one_thing: string;
   prescribed_drill: { error_type: string; reasoning: string };
   detailed_notes: string[];
+  /** Set when the basic (non-LLM) report was used, e.g. hourly spend cap reached. */
+  _note?: string;
 }
 
 export interface FeedbackResponse {

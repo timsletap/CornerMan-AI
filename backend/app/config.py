@@ -54,10 +54,10 @@ class Settings(BaseSettings):
     MEDIA_URL_TTL_SECONDS: int = 300
 
     # Limits
-    FREE_TIER_DAILY_UPLOADS: int = 999
+    FREE_TIER_DAILY_UPLOADS: int = 5
     MAX_VIDEO_DURATION_SECONDS: int = 1800
     MAX_VIDEO_SIZE_MB: int = 500
-    API_CREDIT_HOURLY_LIMIT: float = 999.00
+    API_CREDIT_HOURLY_LIMIT: float = 1.00
 
     @model_validator(mode="after")
     def _fail_safe_in_production(self) -> Self:

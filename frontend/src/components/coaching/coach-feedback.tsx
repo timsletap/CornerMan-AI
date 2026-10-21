@@ -42,6 +42,11 @@ export function CoachFeedbackPanel({ rawFeedback }: Props) {
   return (
     <Card>
       <CardTitle>Coach&apos;s Corner</CardTitle>
+      {feedback._note && (
+        <p className="mb-3 rounded border border-amber-700/50 bg-amber-950/30 px-3 py-2 text-xs text-amber-300">
+          {feedback._note}
+        </p>
+      )}
 
       <div className="space-y-4 mt-3">
         <div>

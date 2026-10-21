@@ -2,6 +2,8 @@ import json
 import time
 import uuid
 from collections.abc import Iterator
+from datetime import UTC, datetime
+from math import ceil
 from pathlib import Path
 
 from fastapi import APIRouter, Depends
@@ -27,7 +29,7 @@ from app.schemas.analysis import (
 from app.schemas.common import MessageResponse
 from app.services.cleanup import local_video_path, remove_files, session_files
 from app.services.progress import get_progress
-from app.services.usage import check_api_credit_quota, check_upload_quota, increment_upload_count
+from app.services.usage import check_upload_quota, increment_upload_count, next_daily_reset
 from app.tasks.analysis_tasks import run_analysis_pipeline
 
 router = APIRouter(tags=["Analysis"])
@@ -47,10 +49,16 @@ def trigger_analysis(
     if not video:
         raise NotFoundException("Video")
 
+    # The hourly LLM spend cap is enforced in the worker, which falls back to the basic
+    # report instead of refusing the analysis (PLT-05).
     if not check_upload_quota(db, current_user):
-        raise QuotaExceededException("Daily upload limit reached")
-    if not check_api_credit_quota(db, current_user):
-        raise QuotaExceededException("API credit limit reached")
+        now = datetime.now(UTC)
+        reset = next_daily_reset(now)
+        raise QuotaExceededException(
+            f"Daily analysis limit reached ({settings.FREE_TIER_DAILY_UPLOADS} per day). "
+            f"Resets at {reset.strftime('%Y-%m-%d %H:%M')} UTC.",
+            retry_after_seconds=ceil((reset - now).total_seconds()),
+        )
 
     increment_upload_count(db, current_user.id)
 

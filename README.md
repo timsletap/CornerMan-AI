@@ -163,7 +163,8 @@ Key settings in `backend/.env`:
 | `MAX_VIDEO_DURATION_SECONDS` | 1800 | Max video length (30 min) |
 | `MAX_VIDEO_SIZE_MB` | 500 | Max upload size; larger uploads get 413 |
 | `MEDIA_URL_TTL_SECONDS` | 300 | Lifetime of signed video stream URLs |
-| `FREE_TIER_DAILY_UPLOADS` | 999 | Daily analysis limit |
+| `FREE_TIER_DAILY_UPLOADS` | 5 | Analyses per user per UTC day (free tier); the next one gets 429 |
+| `API_CREDIT_HOURLY_LIMIT` | 1.00 | Max LLM spend per user per rolling hour (USD); over it, coaching uses the basic report |
 | `YOLO_MODEL_NAME` | yolov8m-pose.pt | YOLO model variant |
 | `VISION_FRAME_SKIP` | 1 | Analyze every Nth frame |
 | `STRIKE_VELOCITY_THRESHOLD` | 15.0 | Wrist velocity threshold for strike detection |

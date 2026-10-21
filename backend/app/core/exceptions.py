@@ -43,8 +43,15 @@ class PayloadTooLargeException(HTTPException):
 
 
 class QuotaExceededException(HTTPException):
-    def __init__(self, detail: str = "Usage quota exceeded") -> None:
+    def __init__(
+        self, detail: str = "Usage quota exceeded", retry_after_seconds: int | None = None
+    ) -> None:
         super().__init__(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail=detail,
+            headers=(
+                {"Retry-After": str(retry_after_seconds)}
+                if retry_after_seconds is not None
+                else None
+            ),
         )

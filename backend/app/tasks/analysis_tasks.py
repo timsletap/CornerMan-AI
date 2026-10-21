@@ -3,23 +3,28 @@
 import json
 import logging
 import uuid
-from datetime import UTC, date, datetime
+from datetime import UTC, datetime
 
 from app.database import SessionLocal
 from app.models.analysis import AnalysisSession, AnalysisStatus
 from app.models.drill import Drill, DrillRecommendation
 from app.models.error_flag import ErrorFlag, ErrorType, Severity
 from app.models.strike import Hand, StrikeEvent, StrikeType
-from app.models.usage import UsageTracking
 from app.models.user import User
 from app.models.video import Video
-from app.services.coaching import generate_coaching_feedback
+from app.services.coaching import fallback_report, generate_coaching_feedback
 from app.services.progress import clear_progress, update_progress
+from app.services.usage import check_llm_spend_quota, record_llm_spend
 from app.services.video import get_video_path
 from app.services.vision import run_vision_analysis
 from app.tasks.celery_app import celery_app
 
 logger = logging.getLogger(__name__)
+
+SPEND_CAP_NOTE = (
+    "AI coaching is paused because the hourly usage budget was reached. "
+    "This basic report is built from your vision metrics; try again within the hour."
+)
 
 STRIKE_TYPE_MAP = {
     "jab": StrikeType.JAB,
@@ -159,8 +164,13 @@ def run_analysis_pipeline(self, session_id: str, video_id: str) -> dict:
             "weight_class": user.weight_class.value if user.weight_class else "unknown",
         }
 
-        logger.info("Generating coaching feedback for session %s", session_id)
-        coaching_response = generate_coaching_feedback(vision_json, user_profile)
+        if check_llm_spend_quota(db, user.id):
+            logger.info("Generating coaching feedback for session %s", session_id)
+            coaching_response = generate_coaching_feedback(vision_json, user_profile)
+        else:
+            # PLT-05: over the hourly spend cap. Vision results are still saved.
+            logger.warning("Hourly LLM spend cap reached for user %s; using fallback", user.id)
+            coaching_response = fallback_report(vision_json, SPEND_CAP_NOTE)
 
         # 7. Persist coach feedback
         session.coach_feedback = json.dumps(coaching_response)
@@ -179,9 +189,8 @@ def run_analysis_pipeline(self, session_id: str, video_id: str) -> dict:
                 )
                 db.add(drill_rec)
 
-        # 9. Update usage tracking with API credits
-        usage_info = coaching_response.get("_usage", {})
-        _update_api_credits(db, user.id, float(usage_info.get("cost_usd", 0.0)))
+        # 9. Log the LLM call's actual cost against the hourly spend cap
+        record_llm_spend(db, user.id, sid, coaching_response.get("_usage", {}))
 
         # 10. Mark session as completed
         update_progress(session_id, "complete", 1.0, "Analysis complete!")
@@ -221,27 +230,3 @@ def run_analysis_pipeline(self, session_id: str, video_id: str) -> dict:
 
     finally:
         db.close()
-
-
-def _update_api_credits(db, user_id: uuid.UUID, cost: float) -> None:
-    """Add API credit cost to today's usage tracking record."""
-    today = date.today()
-    usage = (
-        db.query(UsageTracking)
-        .filter(
-            UsageTracking.user_id == user_id,
-            UsageTracking.date == today,
-        )
-        .first()
-    )
-
-    if usage:
-        usage.api_credits_consumed += cost
-    else:
-        usage = UsageTracking(
-            user_id=user_id,
-            date=today,
-            upload_count=0,
-            api_credits_consumed=cost,
-        )
-        db.add(usage)
