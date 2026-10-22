@@ -154,6 +154,8 @@ def seed_video(db: Session, upload_dir: Path) -> Callable[..., Seeded]:
         db.add(video)
         seeded = Seeded(video=video, sessions=[], files=[original])
         seeded.files.append(_touch(original.with_name(f"{vid}_raw.mp4")))  # YouTube leftover
+        poses = _touch(original.with_name(f"{vid}_poses.parquet"))  # stage 1 cache
+        seeded.files.append(poses)
 
         for _ in range(n_sessions):
             sid = uuid.uuid4()
@@ -165,6 +167,7 @@ def seed_video(db: Session, upload_dir: Path) -> Callable[..., Seeded]:
                 video_id=vid,
                 status=AnalysisStatus.COMPLETED,
                 annotated_video_path=str(annotated.resolve()),
+                poses_cache_path=str(poses.resolve()),
             )
             db.add(session)
             db.flush()

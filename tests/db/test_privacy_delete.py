@@ -61,7 +61,7 @@ def test_delete_session_removes_only_its_rows_and_files(
     seeded = seed_video(user)
     target_id, other_id = (s.id for s in seeded.sessions)
     video_id = seeded.video.id
-    original, raw = seeded.files[0], seeded.files[1]
+    original, raw, poses = seeded.files[0], seeded.files[1], seeded.files[2]
 
     res = db_client.delete(f"/api/v1/sessions/{target_id}", headers=headers)
 
@@ -74,7 +74,8 @@ def test_delete_session_removes_only_its_rows_and_files(
     assert count(db, Video, id=video_id) == 1
     for suffix in ("_annotated", "_annotated_h264"):
         assert not original.with_name(f"{target_id}{suffix}.mp4").exists()
-    assert original.exists() and raw.exists()
+    # The poses cache belongs to the video and is shared with the other session.
+    assert original.exists() and raw.exists() and poses.exists()
     assert original.with_name(f"{other_id}_annotated.mp4").exists()
 
 
