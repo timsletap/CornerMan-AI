@@ -1,6 +1,7 @@
 """Progress tracking for analysis pipeline via Redis."""
 
 import json
+from typing import Any
 
 import redis
 
@@ -12,7 +13,9 @@ _redis_client: redis.Redis | None = None
 def _get_redis() -> redis.Redis:
     global _redis_client
     if _redis_client is None:
-        _redis_client = redis.from_url(settings.REDIS_URL, decode_responses=True)
+        _redis_client = redis.from_url(  # type: ignore[no-untyped-call]
+            settings.REDIS_URL, decode_responses=True
+        )
     return _redis_client
 
 
@@ -34,12 +37,13 @@ def update_progress(session_id: str, step: str, progress: float, detail: str = "
     r.setex(f"analysis_progress:{session_id}", 300, json.dumps(data))
 
 
-def get_progress(session_id: str) -> dict | None:
+def get_progress(session_id: str) -> dict[str, Any] | None:
     """Get current progress for a session."""
     r = _get_redis()
     raw = r.get(f"analysis_progress:{session_id}")
     if raw:
-        return json.loads(raw)
+        data: dict[str, Any] = json.loads(str(raw))
+        return data
     return None
 
 

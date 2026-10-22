@@ -12,6 +12,7 @@ from app.config import settings
 from app.models.analysis import AnalysisSession
 from app.models.video import Video
 from app.services.video import delete_video_file
+from app.vision.types import poses_cache_path
 
 logger = logging.getLogger(__name__)
 
@@ -24,15 +25,13 @@ def local_video_path(video: Video) -> Path:
 def session_files(session: AnalysisSession, video_dir: Path | None) -> list[Path]:
     """Files written for one analysis session.
 
-    Includes the annotated video, the intermediate h264 file left behind when a
-    transcode fails, and the poses cache once the pipeline writes one (VIS-08).
+    Includes the annotated video and the intermediate h264 file left behind when a
+    transcode fails. The poses cache belongs to the video (all its sessions share it),
+    so it is removed with the video, not the session.
     """
     paths: list[Path] = []
     if session.annotated_video_path:
         paths.append(Path(session.annotated_video_path))
-    poses_cache = getattr(session, "poses_cache_path", None)
-    if poses_cache:
-        paths.append(Path(poses_cache))
     dirs = {p.parent for p in paths}
     if video_dir is not None:
         dirs.add(video_dir)
@@ -42,8 +41,10 @@ def session_files(session: AnalysisSession, video_dir: Path | None) -> list[Path
 
 
 def video_files(video: Video, sessions: Iterable[AnalysisSession]) -> list[Path]:
-    """Local files for a video: the original, YouTube leftovers, and all session files."""
-    paths: list[Path] = []
+    """Local files for a video: the original, YouTube leftovers, the poses cache, and all
+    session files."""
+    sessions = list(sessions)
+    paths: list[Path] = [Path(s.poses_cache_path) for s in sessions if s.poses_cache_path]
     video_dir: Path | None = None
     if settings.STORAGE_BACKEND == "local":
         original = local_video_path(video)
@@ -52,6 +53,7 @@ def video_files(video: Video, sessions: Iterable[AnalysisSession]) -> list[Path]
         if video.s3_url:
             paths.append(Path(video.s3_url))
         paths.append(original.with_name(f"{original.stem}_raw{original.suffix}"))
+        paths.append(poses_cache_path(str(original)))
     for session in sessions:
         paths += session_files(session, video_dir)
     return paths

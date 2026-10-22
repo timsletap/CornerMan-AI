@@ -109,6 +109,7 @@ def run_analysis_pipeline(self, session_id: str, video_id: str) -> dict:
         annotated_path = vision_json.get("annotated_video_path")
         if annotated_path:
             session.annotated_video_path = annotated_path
+        session.poses_cache_path = vision_json.get("poses_cache_path")
 
         # 4. Persist StrikeEvent rows
         strike_events_data = vision_json.get("strike_events", [])

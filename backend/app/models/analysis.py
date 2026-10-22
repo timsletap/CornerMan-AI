@@ -39,6 +39,8 @@ class AnalysisSession(Base):
     vision_json: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     coach_feedback: Mapped[str | None] = mapped_column(Text, nullable=True)
     annotated_video_path: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    # Stage 1 poses cache (VIS-08); shared by every session of the same video
+    poses_cache_path: Mapped[str | None] = mapped_column(Text, nullable=True)
     processing_started_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
