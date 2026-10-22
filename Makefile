@@ -42,7 +42,7 @@ eval:
 	@echo "make eval SPLIT=$(SPLIT): not implemented until EVAL-04" && exit 1
 
 golden-update:
-	@echo "make golden-update: not implemented until QA-02" && exit 1
+	PYTHONPATH=backend $(PY) tests/golden/golden.py
 
 bench:
 	@echo "make bench: not implemented until PERF-01" && exit 1
