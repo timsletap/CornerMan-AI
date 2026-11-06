@@ -40,6 +40,7 @@ class UserUpdate(BaseModel):
         if not v:
             raise ValueError("full_name must not be blank")
         return v
+
     stance: Stance | None = None
     weight_class: WeightClass | None = None
     experience_level: ExperienceLevel | None = None
