@@ -1,7 +1,7 @@
 import uuid
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, UploadFile
+from fastapi import APIRouter, Depends, Query, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
@@ -37,6 +37,8 @@ async def upload_video(
 ) -> Video:
     if not file.filename:
         raise BadRequestException("No filename provided")
+    if len(file.filename) > 255:
+        raise BadRequestException("Filename too long (max 255 characters)")
     ext = file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else ""
     if ext not in ALLOWED_FORMATS:
         raise BadRequestException(f"Invalid format. Allowed: {ALLOWED_FORMATS}")
@@ -79,8 +81,8 @@ async def upload_video(
 
 @router.get("/", response_model=list[VideoResponse])
 def list_videos(
-    skip: int = 0,
-    limit: int = 20,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> list[Video]:

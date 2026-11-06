@@ -1,27 +1,45 @@
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 from app.models.user import ExperienceLevel, Stance, UserRole, UserTier, WeightClass
 
 
 class UserCreate(BaseModel):
     email: EmailStr
-    password: str
-    full_name: str
+    password: str = Field(min_length=8, max_length=128)
+    full_name: str = Field(min_length=1, max_length=255)
     stance: Stance | None = None
     weight_class: WeightClass | None = None
     experience_level: ExperienceLevel | None = None
 
+    @field_validator("full_name")
+    @classmethod
+    def _strip_full_name(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("full_name must not be blank")
+        return v
+
 
 class UserLogin(BaseModel):
     email: EmailStr
-    password: str
+    password: str = Field(min_length=1, max_length=128)
 
 
 class UserUpdate(BaseModel):
-    full_name: str | None = None
+    full_name: str | None = Field(default=None, min_length=1, max_length=255)
+
+    @field_validator("full_name")
+    @classmethod
+    def _strip_full_name(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
+        v = v.strip()
+        if not v:
+            raise ValueError("full_name must not be blank")
+        return v
     stance: Stance | None = None
     weight_class: WeightClass | None = None
     experience_level: ExperienceLevel | None = None

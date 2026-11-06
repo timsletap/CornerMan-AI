@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, model_validator
 
 from app.models.video import VideoStatus
 
@@ -34,5 +34,11 @@ class VideoResponse(BaseModel):
 
 
 class VideoTrimRequest(BaseModel):
-    start_time: float
-    end_time: float
+    start_time: float = Field(ge=0)
+    end_time: float = Field(gt=0)
+
+    @model_validator(mode="after")
+    def _ordered_times(self) -> "VideoTrimRequest":
+        if self.end_time <= self.start_time:
+            raise ValueError("end_time must be greater than start_time")
+        return self

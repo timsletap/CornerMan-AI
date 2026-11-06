@@ -1,12 +1,13 @@
 import uuid
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
 from app.core.exceptions import NotFoundException
 from app.models.analysis import AnalysisSession
 from app.models.drill import Drill, DrillRecommendation
+from app.models.error_flag import ErrorType
 from app.models.user import User
 from app.schemas.analysis import DrillRecommendationResponse, DrillResponse
 
@@ -15,12 +16,12 @@ router = APIRouter(prefix="/drills", tags=["Drills"])
 
 @router.get("/", response_model=list[DrillResponse])
 def list_drills(
-    error_type: str | None = None,
+    error_type: ErrorType | None = Query(None),
     db: Session = Depends(get_db),
 ) -> list[Drill]:
     query = db.query(Drill)
     if error_type:
-        query = query.filter(Drill.error_type == error_type)
+        query = query.filter(Drill.error_type == error_type.value)
     return query.all()
 
 

@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.models.analysis import AnalysisStatus
 from app.models.error_flag import ErrorType, Severity
@@ -80,7 +80,7 @@ class AnalysisSessionDetailResponse(AnalysisSessionResponse):
 
 class FeedbackCreateRequest(BaseModel):
     rating: Rating
-    comment: str | None = None
+    comment: str | None = Field(default=None, max_length=2000)
 
 
 class FeedbackResponse(BaseModel):

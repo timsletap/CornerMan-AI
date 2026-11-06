@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 from math import ceil
 from pathlib import Path
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy.orm import Session
 
@@ -78,8 +78,8 @@ def trigger_analysis(
 
 @router.get("/sessions", response_model=list[AnalysisSessionResponse])
 def list_sessions(
-    skip: int = 0,
-    limit: int = 20,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> list[AnalysisSession]:
