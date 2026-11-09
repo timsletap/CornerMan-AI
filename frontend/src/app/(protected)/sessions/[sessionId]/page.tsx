@@ -60,21 +60,32 @@ export default function SessionPage() {
   const fetchSession = useCallback(async () => {
     if (!sessionId) return;
     try {
-      const data = await api.getSession(sessionId);
-      setSession(data);
-      if (data.status === "completed" || data.status === "failed") {
-        setProgress(null);
-      }
+      return await api.getSession(sessionId);
     } catch {
-      // leave `session` as is; a missing session renders the not-found state
-    } finally {
-      setLoading(false);
+      return null;
     }
   }, [sessionId]);
 
+  const applySession = useCallback((data: AnalysisSessionDetailResponse | null | undefined) => {
+    if (!data) return;
+    setSession(data);
+    if (data.status === "completed" || data.status === "failed") {
+      setProgress(null);
+    }
+  }, []);
+
   useEffect(() => {
-    fetchSession();
-  }, [fetchSession]);
+    if (!sessionId) return;
+    let active = true;
+    void fetchSession().then((data) => {
+      if (!active) return;
+      applySession(data);
+      setLoading(false);
+    });
+    return () => {
+      active = false;
+    };
+  }, [sessionId, fetchSession, applySession]);
 
   // The clip's file name makes a better title than an id; it is optional
   const videoId = session?.video_id;
@@ -94,10 +105,10 @@ export default function SessionPage() {
       onProgress: setProgress,
       onFinished: () => {
         setProgress(null);
-        fetchSession();
+        void fetchSession().then(applySession);
       },
     });
-  }, [sessionId, isRunning, fetchSession]);
+  }, [sessionId, isRunning, fetchSession, applySession]);
 
   if (loading) return <LoadingBlock />;
 
