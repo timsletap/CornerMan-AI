@@ -2,44 +2,27 @@
 
 import Link from "next/link";
 import type { VideoResponse } from "@/lib/types";
-import { Card } from "@/components/ui/card";
+import { formatBytes, formatDate, formatDuration } from "@/lib/format";
 import { StatusBadge } from "@/components/ui/badge";
-
-function formatBytes(bytes: number) {
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
-}
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
+import { FilmIcon } from "@/components/ui/icons";
 
 export function VideoCard({ video }: { video: VideoResponse }) {
   return (
-    <Link href={`/videos/${video.id}`}>
-      <Card className="hover:border-zinc-600 transition-colors cursor-pointer h-full">
-        <div className="flex items-start justify-between mb-3">
-          <div className="flex-1 min-w-0">
-            <h3 className="text-sm font-medium text-white truncate">
-              {video.original_filename}
-            </h3>
-            <p className="text-xs text-zinc-500 mt-0.5">{formatDate(video.created_at)}</p>
-          </div>
-          <StatusBadge status={video.status} />
-        </div>
-        <div className="flex items-center gap-4 text-xs text-zinc-400">
-          <span>{formatBytes(video.file_size_bytes)}</span>
-          {video.duration_seconds && (
-            <span>{video.duration_seconds.toFixed(1)}s</span>
-          )}
-          <span className="uppercase">{video.format}</span>
-        </div>
-      </Card>
+    <Link
+      href={`/videos/${video.id}`}
+      className="group flex items-center gap-4 rounded-md border border-line bg-panel/85 p-4 transition-colors hover:border-chalk/40"
+    >
+      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-sm bg-panel-2 text-2xl text-mute transition-colors group-hover:text-blood">
+        <FilmIcon />
+      </span>
+      <div className="min-w-0 flex-1">
+        <h3 className="truncate font-medium text-chalk">{video.original_filename}</h3>
+        <p className="mt-0.5 font-mono text-xs text-dim">
+          {formatDate(video.created_at)} · {formatDuration(video.duration_seconds)} ·{" "}
+          {formatBytes(video.file_size_bytes)}
+        </p>
+      </div>
+      <StatusBadge status={video.status} />
     </Link>
   );
 }

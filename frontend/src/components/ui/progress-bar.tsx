@@ -1,9 +1,16 @@
 export function ProgressBar({ value, className = "" }: { value: number; className?: string }) {
+  const pct = Math.min(100, Math.max(0, value));
   return (
-    <div className={`h-2 w-full rounded-full bg-zinc-800 overflow-hidden ${className}`}>
+    <div
+      role="progressbar"
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={Math.round(pct)}
+      className={`h-1.5 w-full overflow-hidden bg-line ${className}`}
+    >
       <div
-        className="h-full rounded-full bg-red-600 transition-all duration-300"
-        style={{ width: `${Math.min(100, Math.max(0, value))}%` }}
+        className="h-full bg-gradient-to-r from-blood-deep via-blood to-gold transition-[width] duration-500 ease-out"
+        style={{ width: `${pct}%` }}
       />
     </div>
   );

@@ -18,11 +18,12 @@ export function VideoPlayer({ src, onTimeUpdate, videoRef: externalRef, onSrcErr
   const resumeAt = useRef<number | null>(null);
 
   return (
-    <div className="relative rounded-lg overflow-hidden bg-black">
+    <div className="hud-frame border border-line bg-black">
       <video
         ref={ref}
         src={src ?? undefined}
         onTimeUpdate={(e) => onTimeUpdate?.(e.currentTarget.currentTime * 1000)}
+        onSeeked={(e) => onTimeUpdate?.(e.currentTarget.currentTime * 1000)}
         onError={(e) => {
           if (!onSrcError) return;
           resumeAt.current = e.currentTarget.currentTime;
@@ -36,7 +37,7 @@ export function VideoPlayer({ src, onTimeUpdate, videoRef: externalRef, onSrcErr
         }}
         controls
         playsInline
-        className="w-full aspect-video"
+        className="aspect-video w-full"
         preload="metadata"
       />
     </div>

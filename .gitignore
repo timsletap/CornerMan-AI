@@ -29,3 +29,6 @@ __pycache__/
 .ruff_cache/
 .coverage
 coverage.xml
+
+# Browser automation output (screenshots, snapshots)
+.playwright-mcp/

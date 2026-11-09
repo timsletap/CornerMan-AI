@@ -3,13 +3,14 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
+import { formatBytes, formatDuration } from "@/lib/format";
 import type { VideoResponse } from "@/lib/types";
 import { VideoPlayer } from "@/components/video/video-player";
 import { useSignedMediaUrl } from "@/lib/hooks/use-signed-media-url";
-import { Card, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Button, ButtonLink } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/badge";
-import { Spinner } from "@/components/ui/spinner";
+import { BoltIcon } from "@/components/ui/icons";
+import { ErrorNote, LoadingBlock } from "@/components/ui/spinner";
 
 export default function VideoDetailPage() {
   const { videoId } = useParams<{ videoId: string }>();
@@ -17,13 +18,17 @@ export default function VideoDetailPage() {
   const [video, setVideo] = useState<VideoResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [error, setError] = useState("");
   const stream = useSignedMediaUrl("video", video?.id ?? null);
 
   useEffect(() => {
-    if (videoId) {
-      api.getVideo(videoId).then(setVideo).finally(() => setLoading(false));
-    }
+    if (!videoId) return;
+    api
+      .getVideo(videoId)
+      .then(setVideo)
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, [videoId]);
 
   async function handleAnalyze() {
@@ -34,84 +39,92 @@ export default function VideoDetailPage() {
       const session = await api.triggerAnalysis(videoId);
       router.push(`/sessions/${session.id}`);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to start analysis");
+      setError(e instanceof Error ? e.message : "Couldn't start the breakdown");
       setAnalyzing(false);
     }
   }
 
   async function handleDelete() {
-    if (!videoId || !confirm("Delete this video?")) return;
-    await api.deleteVideo(videoId);
-    router.push("/dashboard");
+    if (!videoId) return;
+    setError("");
+    try {
+      await api.deleteVideo(videoId);
+      router.push("/dashboard");
+    } catch {
+      setError("Couldn't delete the clip. Try again.");
+      setConfirmingDelete(false);
+    }
   }
 
-  if (loading) {
+  if (loading) return <LoadingBlock />;
+
+  if (!video) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <Spinner />
+      <div className="py-24 text-center">
+        <h1 className="display text-5xl text-chalk">Clip not found</h1>
+        <p className="mt-3 text-mute">It may have been deleted.</p>
+        <ButtonLink href="/dashboard" variant="outline" className="mt-6">
+          Back to camp
+        </ButtonLink>
       </div>
     );
   }
 
-  if (!video) {
-    return <p className="text-zinc-400">Video not found.</p>;
-  }
+  const details = [
+    ["Length", formatDuration(video.duration_seconds)],
+    ["Size", formatBytes(video.file_size_bytes)],
+    ["Format", video.format.toUpperCase()],
+    ["Added", new Date(video.created_at).toLocaleString()],
+  ];
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-white">{video.original_filename}</h1>
-          <div className="flex items-center gap-3 mt-1">
-            <StatusBadge status={video.status} />
-            <span className="text-sm text-zinc-400">
-              {video.duration_seconds?.toFixed(1)}s
-            </span>
-            <span className="text-sm text-zinc-500 uppercase">{video.format}</span>
-          </div>
+    <div className="mx-auto max-w-5xl space-y-6">
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div className="min-w-0">
+          <p className="eyebrow mb-2 flex items-center gap-3 text-blood">
+            Clip <StatusBadge status={video.status} />
+          </p>
+          <h1 className="display truncate text-4xl text-chalk sm:text-5xl">
+            {video.original_filename}
+          </h1>
         </div>
-        <div className="flex gap-2">
-          <Button
-            onClick={handleAnalyze}
-            disabled={analyzing || video.status === "processing"}
-          >
-            {analyzing ? "Starting..." : "Analyze"}
-          </Button>
-          <Button variant="danger" size="sm" onClick={handleDelete}>
-            Delete
-          </Button>
-        </div>
-      </div>
+        <Button size="lg" onClick={handleAnalyze} disabled={analyzing || video.status === "processing"}>
+          <BoltIcon /> {analyzing ? "Starting..." : "Break it down"}
+        </Button>
+      </header>
 
-      {error && (
-        <div className="rounded-lg bg-red-900/30 border border-red-800 p-3 text-sm text-red-400">
-          {error}
-        </div>
-      )}
+      {error && <ErrorNote>{error}</ErrorNote>}
 
       <VideoPlayer src={stream.url} onSrcError={stream.refreshIfExpired} />
 
-      <Card>
-        <CardTitle>Video Details</CardTitle>
-        <div className="grid grid-cols-2 gap-4 mt-3 text-sm">
-          <div>
-            <span className="text-zinc-500">Duration</span>
-            <p className="text-white">{video.duration_seconds?.toFixed(1) ?? "--"}s</p>
+      <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-md border border-line bg-line sm:grid-cols-4">
+        {details.map(([label, value]) => (
+          <div key={label} className="bg-panel p-4">
+            <dt className="eyebrow">{label}</dt>
+            <dd className="mt-1.5 font-medium text-chalk">{value}</dd>
           </div>
-          <div>
-            <span className="text-zinc-500">Size</span>
-            <p className="text-white">{(video.file_size_bytes / 1024 / 1024).toFixed(1)} MB</p>
+        ))}
+      </dl>
+
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-5">
+        <p className="text-sm text-mute">
+          Deleting a clip also removes its breakdowns and the overlay video.
+        </p>
+        {confirmingDelete ? (
+          <div className="flex gap-2">
+            <Button variant="danger" size="sm" onClick={handleDelete}>
+              Yes, delete it
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => setConfirmingDelete(false)}>
+              Keep it
+            </Button>
           </div>
-          <div>
-            <span className="text-zinc-500">Format</span>
-            <p className="text-white uppercase">{video.format}</p>
-          </div>
-          <div>
-            <span className="text-zinc-500">Uploaded</span>
-            <p className="text-white">{new Date(video.created_at).toLocaleString()}</p>
-          </div>
-        </div>
-      </Card>
+        ) : (
+          <Button variant="danger" size="sm" onClick={() => setConfirmingDelete(true)}>
+            Delete clip
+          </Button>
+        )}
+      </div>
     </div>
   );
 }

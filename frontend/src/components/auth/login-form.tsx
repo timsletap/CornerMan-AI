@@ -4,9 +4,10 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/context/auth-context";
+import { AuthShell } from "@/components/auth/auth-shell";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { ErrorNote } from "@/components/ui/spinner";
 
 export function LoginForm() {
   const { login } = useAuth();
@@ -24,31 +25,31 @@ export function LoginForm() {
       await login(email, password);
       router.push("/dashboard");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed");
+      setError(err instanceof Error ? err.message : "Sign in failed");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <Card className="w-full max-w-md mx-auto">
-      <div className="text-center mb-6">
-        <div className="h-12 w-12 rounded-xl bg-red-600 flex items-center justify-center font-bold text-white text-xl mx-auto mb-3">
-          CM
-        </div>
-        <h1 className="text-2xl font-bold text-white">Welcome Back</h1>
-        <p className="text-zinc-400 text-sm mt-1">Sign in to CornerMan AI</p>
-      </div>
-
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {error && (
-          <div className="rounded-lg bg-red-900/30 border border-red-800 p-3 text-sm text-red-400">
-            {error}
-          </div>
-        )}
+    <AuthShell
+      eyebrow="Welcome back"
+      title="Back to camp"
+      footer={
+        <>
+          New here?{" "}
+          <Link href="/register" className="font-medium text-chalk underline decoration-blood underline-offset-4 hover:text-blood">
+            Create an account
+          </Link>
+        </>
+      }
+    >
+      <form onSubmit={handleSubmit} className="space-y-5">
+        {error && <ErrorNote>{error}</ErrorNote>}
         <Input
           label="Email"
           type="email"
+          autoComplete="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="fighter@example.com"
@@ -57,22 +58,16 @@ export function LoginForm() {
         <Input
           label="Password"
           type="password"
+          autoComplete="current-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="Your password"
           required
         />
-        <Button type="submit" disabled={loading} className="w-full">
-          {loading ? "Signing in..." : "Sign In"}
+        <Button type="submit" size="lg" disabled={loading} className="w-full">
+          {loading ? "Signing in..." : "Sign in"}
         </Button>
       </form>
-
-      <p className="text-center text-sm text-zinc-400 mt-4">
-        Don&apos;t have an account?{" "}
-        <Link href="/register" className="text-red-400 hover:text-red-300">
-          Sign up
-        </Link>
-      </p>
-    </Card>
+    </AuthShell>
   );
 }
