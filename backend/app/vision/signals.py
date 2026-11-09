@@ -1,4 +1,5 @@
-"""Stage 2: signals derived from the fighter's keypoints (occlusion, velocity, angles).
+"""Stage 2: signals derived from the fighter's keypoints (smoothing, occlusion,
+velocity, angles).
 
 Pure functions: no I/O, database, task queue, or progress reporting.
 """
@@ -7,11 +8,111 @@ from __future__ import annotations
 
 import math
 from collections.abc import Sequence
+from dataclasses import replace
+
+import numpy as np
+import numpy.typing as npt
 
 from app.vision.types import FrameKeypoints, Keypoint, VideoMeta, VisionConfig
 
 Velocity = tuple[float, float, float]
 """(magnitude in frame heights/s, dx px/s, dy px/s)"""
+
+
+MIN_KEYPOINT_CONF = 0.5
+"""Keypoints below this confidence are not trusted: not fed to the filter, no velocity."""
+
+FloatArray = npt.NDArray[np.float64]
+
+
+def _alpha(dt: FloatArray, cutoff: FloatArray) -> FloatArray:
+    """Low-pass smoothing factor for a time step ``dt`` (s) and cutoff frequency (Hz)."""
+    tau = 1.0 / (2.0 * math.pi * cutoff)
+    return 1.0 / (1.0 + tau / dt)
+
+
+def one_euro(
+    values: FloatArray,
+    t_s: FloatArray,
+    valid: npt.NDArray[np.bool_],
+    min_cutoff: float,
+    beta: float,
+    d_cutoff: float,
+) -> FloatArray:
+    """One Euro filter (Casiez et al. 2012) over K independent signals.
+
+    The cutoff rises with the signal's speed: heavy smoothing when it is still (kills
+    jitter), light smoothing when it moves fast (little lag).
+
+    Args:
+        values: (N, K) samples; any unit, ``beta`` is per that unit per second.
+        t_s: (N,) sample times in seconds, increasing.
+        valid: (N, K) False where a sample must not be used; the output holds the last
+            filtered value there (the raw value before the first valid sample).
+        min_cutoff: cutoff in Hz at zero speed.
+        beta: cutoff increase in Hz per unit of speed.
+        d_cutoff: cutoff in Hz for the speed estimate.
+    """
+    n, k = values.shape
+    out = values.astype(np.float64).copy()
+    x_hat = np.zeros(k)
+    dx_hat = np.zeros(k)
+    t_prev = np.zeros(k)
+    started = np.zeros(k, dtype=bool)
+    for i in range(n):
+        ok = valid[i]
+        first = ok & ~started
+        x_hat[first] = values[i, first]
+        dx_hat[first] = 0.0
+
+        cont = ok & started
+        if cont.any():
+            dt = np.maximum(t_s[i] - t_prev[cont], 1e-6)
+            dx = (values[i, cont] - x_hat[cont]) / dt
+            a_d = _alpha(dt, np.full(dt.shape, d_cutoff))
+            dx_hat[cont] = a_d * dx + (1.0 - a_d) * dx_hat[cont]
+            a = _alpha(dt, min_cutoff + beta * np.abs(dx_hat[cont]))
+            x_hat[cont] = a * values[i, cont] + (1.0 - a) * x_hat[cont]
+
+        t_prev[ok] = t_s[i]
+        started |= ok
+        out[i, started] = x_hat[started]
+    return out
+
+
+def smooth_frames(
+    frames: Sequence[FrameKeypoints], meta: VideoMeta, cfg: VisionConfig
+) -> list[FrameKeypoints]:
+    """VIS-10: the fighter's keypoints with pose jitter filtered out.
+
+    One filter per keypoint coordinate. Points below ``MIN_KEYPOINT_CONF`` are not fed
+    to the filter; they take the last filtered position and keep their low confidence,
+    which marks them as interpolated for later stages.
+    """
+    if not frames:
+        return []
+    raw = np.array([fk.keypoints for fk in frames], dtype=np.float64)  # (N, 17, 3)
+    n = raw.shape[0]
+    unit = float(max(1, meta.height))
+    xy = raw[:, :, :2].reshape(n, -1) / unit
+    valid = np.repeat(raw[:, :, 2] >= MIN_KEYPOINT_CONF, 2, axis=1)
+    t_s = np.array([fk.frame_number for fk in frames], dtype=np.float64) / meta.fps
+    smooth = (
+        one_euro(
+            xy, t_s, valid, cfg.one_euro_min_cutoff, cfg.one_euro_beta, cfg.one_euro_d_cutoff
+        ).reshape(n, -1, 2)
+        * unit
+    )
+    return [
+        replace(
+            fk,
+            keypoints=[
+                (float(smooth[i, j, 0]), float(smooth[i, j, 1]), fk.keypoints[j][2])
+                for j in range(raw.shape[1])
+            ],
+        )
+        for i, fk in enumerate(frames)
+    ]
 
 
 def occluded_ranges(
@@ -71,7 +172,10 @@ def wrist_velocities(
             velocities.append((0.0, 0.0, 0.0))
             continue
 
-        if prev.keypoints[hand_idx][2] < 0.5 or curr.keypoints[hand_idx][2] < 0.5:
+        if (
+            prev.keypoints[hand_idx][2] < MIN_KEYPOINT_CONF
+            or curr.keypoints[hand_idx][2] < MIN_KEYPOINT_CONF
+        ):
             velocities.append((0.0, 0.0, 0.0))
             continue
 

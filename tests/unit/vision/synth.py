@@ -78,6 +78,11 @@ def bbox(kps: np.ndarray, pad: float = 20.0) -> list[float]:
     ]
 
 
+PUNCH_SW = [0.3, 1.0, 1.6, 1.3, 1.0, 0.7, 0.4, 0.2, 0.0]
+"""A realistic punch: wrist extension in sw per frame at 30 fps, fast out (peak speed
+between frames 0 and 1, full extension at frame 2), slower back."""
+
+
 def punch_offsets(n_frames: int = 6, reach_sw: float = 1.6) -> list[float]:
     """Wrist extension (in sw) per frame: out over the first half, back over the second."""
     half = n_frames // 2

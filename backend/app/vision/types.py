@@ -107,6 +107,12 @@ class VisionConfig:
     reacquire_iou: float = 0.3
     reacquire_s: float = 1.0
     """Seconds after losing the target during which a new id is matched by bbox IoU."""
+    one_euro_min_cutoff: float = 1.0
+    """Hz."""
+    one_euro_beta: float = 5.0
+    """Cutoff gain per unit of speed (frame heights per second)."""
+    one_euro_d_cutoff: float = 1.0
+    """Hz."""
 
     @property
     def skip(self) -> int:
@@ -126,6 +132,9 @@ class VisionConfig:
             target_select_s=settings.TARGET_SELECT_SECONDS,
             reacquire_iou=settings.REACQUIRE_IOU,
             reacquire_s=settings.REACQUIRE_SECONDS,
+            one_euro_min_cutoff=settings.ONE_EURO_MIN_CUTOFF,
+            one_euro_beta=settings.ONE_EURO_BETA,
+            one_euro_d_cutoff=settings.ONE_EURO_D_CUTOFF,
         )
 
 

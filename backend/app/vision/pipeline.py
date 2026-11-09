@@ -16,7 +16,7 @@ from typing import Any
 from app.services.progress import update_progress
 from app.vision import errors as error_stage
 from app.vision import pose, render, strikes, tracking
-from app.vision.signals import occluded_ranges
+from app.vision.signals import occluded_ranges, smooth_frames
 from app.vision.types import (
     ErrorDetection,
     FrameKeypoints,
@@ -54,7 +54,7 @@ def analyze_poses(
     """
     meta = poses.meta
     target = tracking.follow_target(poses.frames, meta, cfg, target_track_id)
-    frames = target.frames
+    frames = smooth_frames(target.frames, meta, cfg)
     ranges, active = occluded_ranges(frames, meta, cfg)
     found = strikes.detect_strikes(frames, active, meta, cfg)
     errs = error_stage.analyze_guard(found, frames, cfg) + error_stage.detect_telegraph(
