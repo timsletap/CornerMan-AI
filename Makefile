@@ -42,8 +42,9 @@ test-backend:
 test-frontend:
 	cd frontend && npx vitest run
 
+# Score the pipeline on a labeled split (dev, test, or the committed fixtures).
 eval:
-	@echo "make eval SPLIT=$(SPLIT): not implemented until EVAL-04" && exit 1
+	$(PY) -m eval.run --split $(SPLIT)
 
 golden-update:
 	PYTHONPATH=backend $(PY) tests/golden/golden.py
