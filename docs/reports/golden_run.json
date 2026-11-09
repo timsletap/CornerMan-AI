@@ -1,0 +1,225 @@
+{
+  "git_sha": "501d7fb",
+  "clip": {
+    "path": "tests/golden/clip.mp4",
+    "duration_s": 4.98,
+    "fps": 30.55,
+    "frames": 152,
+    "resolution": "1280x720"
+  },
+  "model": "yolov8m-pose.pt",
+  "settings": {
+    "STRIKE_VELOCITY_THRESHOLD": 1.0,
+    "GUARD_DISTANCE_THRESHOLD": 0.35,
+    "TELEGRAPH_VARIANCE_THRESHOLD": 0.02,
+    "OCCLUSION_CONFIDENCE_THRESHOLD": 0.7,
+    "OCCLUSION_PAUSE_SECONDS": 0.5,
+    "VISION_FRAME_SKIP": 1
+  },
+  "hardware": "Intel64 Family 6 Model 198 Stepping 2, GenuineIntel, 24 logical cores, CPU only, torch 2.14.1+cpu",
+  "throughput": {
+    "stage1_seconds": 48.11,
+    "stage1_fps": 3.2,
+    "stage1_x_realtime": 0.1,
+    "stages23_ms": 84.6,
+    "stages23_x_realtime": 59,
+    "stages23_repeats": 25
+  },
+  "detections": {
+    "strikes": 8,
+    "by_type": {
+      "body_shot": 2,
+      "hook": 5,
+      "jab": 1
+    },
+    "errors": {
+      "chicken_wing": 3,
+      "dropped_guard": 1
+    },
+    "guard_score": 87.5
+  },
+  "matches_golden": {
+    "strike_events": true,
+    "error_flags": true,
+    "metrics": true
+  },
+  "session": {
+    "vision": {
+      "video_metadata": {
+        "fps": 30.54662379421222,
+        "total_frames": 152,
+        "duration_seconds": 4.98,
+        "resolution": {
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "frames_analyzed": 152,
+      "occluded_ranges": [],
+      "strike_events": [
+        {
+          "frame_number": 48,
+          "timestamp_ms": 1571,
+          "hand": "left",
+          "strike_type": "body_shot",
+          "velocity": 1.93
+        },
+        {
+          "frame_number": 55,
+          "timestamp_ms": 1800,
+          "hand": "right",
+          "strike_type": "body_shot",
+          "velocity": 7.36
+        },
+        {
+          "frame_number": 71,
+          "timestamp_ms": 2324,
+          "hand": "left",
+          "strike_type": "hook",
+          "velocity": 6.35
+        },
+        {
+          "frame_number": 71,
+          "timestamp_ms": 2324,
+          "hand": "right",
+          "strike_type": "jab",
+          "velocity": 6.33
+        },
+        {
+          "frame_number": 82,
+          "timestamp_ms": 2684,
+          "hand": "left",
+          "strike_type": "hook",
+          "velocity": 6.07
+        },
+        {
+          "frame_number": 82,
+          "timestamp_ms": 2684,
+          "hand": "right",
+          "strike_type": "hook",
+          "velocity": 5.54
+        },
+        {
+          "frame_number": 143,
+          "timestamp_ms": 4681,
+          "hand": "left",
+          "strike_type": "hook",
+          "velocity": 5.71
+        },
+        {
+          "frame_number": 143,
+          "timestamp_ms": 4681,
+          "hand": "right",
+          "strike_type": "hook",
+          "velocity": 5.52
+        }
+      ],
+      "error_flags": [
+        {
+          "frame_number": 55,
+          "error_type": "dropped_guard",
+          "severity": "medium",
+          "details": {
+            "off_hand": "left",
+            "normalized_distance": 0.58,
+            "threshold": 0.35
+          },
+          "related_strike_index": 1
+        },
+        {
+          "frame_number": 55,
+          "error_type": "chicken_wing",
+          "severity": "high",
+          "details": {
+            "hand": "right",
+            "elbow_x_variance": 0.088,
+            "threshold": 0.02,
+            "pre_strike_frames_analyzed": 10
+          },
+          "related_strike_index": 1
+        },
+        {
+          "frame_number": 82,
+          "error_type": "chicken_wing",
+          "severity": "high",
+          "details": {
+            "hand": "left",
+            "elbow_x_variance": 0.0733,
+            "threshold": 0.02,
+            "pre_strike_frames_analyzed": 10
+          },
+          "related_strike_index": 4
+        },
+        {
+          "frame_number": 82,
+          "error_type": "chicken_wing",
+          "severity": "high",
+          "details": {
+            "hand": "right",
+            "elbow_x_variance": 0.0707,
+            "threshold": 0.02,
+            "pre_strike_frames_analyzed": 10
+          },
+          "related_strike_index": 5
+        }
+      ],
+      "metrics": {
+        "total_strikes": 8,
+        "avg_velocity": 5.6,
+        "guard_score": 87.5,
+        "strikes_per_minute": 8.0,
+        "error_counts": {
+          "dropped_guard": 1,
+          "chicken_wing": 3
+        }
+      }
+    },
+    "coaching": {
+      "summary": "Detected 8 strikes with an average velocity of 5.6 u/s. Guard score: 88%.",
+      "key_metric": "Guard Score: 88%",
+      "one_thing": "Focus on keeping your guard hand tight to your chin when throwing combinations.",
+      "prescribed_drill": {
+        "error_type": "dropped_guard",
+        "reasoning": "Guard maintenance is fundamental."
+      },
+      "detailed_notes": [
+        "Total strikes detected: 8",
+        "Strikes per minute: 8.0",
+        "Errors found: 4"
+      ],
+      "mapped_drills": [],
+      "_usage": {
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "cost_usd": 0.0
+      },
+      "_note": "Basic report: no LLM key configured."
+    },
+    "drills": [
+      {
+        "name": "Elbow Pin Shadow Boxing",
+        "description": "Shadow box with a tennis ball squeezed between your elbow and ribcage on the punching side. If the ball drops, your elbow flared out (telegraphed). Focus on compact, tight punches.",
+        "error_type": "chicken_wing",
+        "difficulty_level": 1
+      },
+      {
+        "name": "Towel Under Arm Drill",
+        "description": "Tuck a small towel under each armpit. Throw straights (jab/cross) without dropping the towel. This forces you to keep elbows tight and eliminate the wind-up.",
+        "error_type": "chicken_wing",
+        "difficulty_level": 1
+      },
+      {
+        "name": "Wall Touch Drill",
+        "description": "Stand with your back against a wall. Throw combinations, ensuring your rear hand touches the wall (near your chin) after every punch. This builds the habit of returning your hand to guard position.",
+        "error_type": "dropped_guard",
+        "difficulty_level": 1
+      },
+      {
+        "name": "Mirror Guard Check",
+        "description": "Shadow box in front of a mirror. After every combination, freeze and check: Is your non-punching hand at chin level? If not, reset and repeat slower.",
+        "error_type": "dropped_guard",
+        "difficulty_level": 1
+      }
+    ]
+  }
+}

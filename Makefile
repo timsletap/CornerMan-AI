@@ -5,15 +5,19 @@ SPLIT ?= dev
 # Packages held to mypy --strict (FRD section 0). Only those that exist are checked.
 STRICT_PACKAGES := $(wildcard backend/app/vision backend/app/coaching eval perf tools)
 
-.PHONY: check lint lint-backend lint-frontend typecheck typecheck-backend typecheck-frontend test test-backend test-frontend eval golden-update bench
+.PHONY: golden-report readme-check check lint lint-backend lint-frontend typecheck typecheck-backend typecheck-frontend test test-backend test-frontend eval golden-update bench
 
 check: lint typecheck test
 
 lint: lint-backend lint-frontend
 
-lint-backend:
+lint-backend: readme-check
 	$(PY) -m ruff check backend eval tools tests
 	$(PY) -m ruff format --check backend eval tools tests
+
+# The README's measured table must match the committed report it is generated from.
+readme-check:
+	$(PY) -m tools.golden_report check
 
 lint-frontend:
 	cd frontend && npm run lint
@@ -43,6 +47,12 @@ eval:
 
 golden-update:
 	PYTHONPATH=backend $(PY) tests/golden/golden.py
+
+# Re-measure the pipeline on the golden clip (downloads the pose model on first run),
+# then regenerate the README table from the report.
+golden-report:
+	PYTHONPATH=backend $(PY) -m tools.golden_report run
+	$(PY) -m tools.golden_report readme
 
 bench:
 	@echo "make bench: not implemented until PERF-01" && exit 1
