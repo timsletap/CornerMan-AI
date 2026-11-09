@@ -1,0 +1,108 @@
+{
+  "planHash": "2111f5b74e2f73ec961ba275899dcc0aea5843eb3b73dee887d85eaeb02c3d91",
+  "phase": "postupgrade",
+  "recordedAtUtc": "2026-11-09T23:01:48.6964023Z",
+  "retryCount": 3,
+  "resetBaseline": false,
+  "complete": true,
+  "result": {
+    "setupSucceeded": true,
+    "setupDurationMs": 14501,
+    "setupFailureOutput": null,
+    "assertions": [
+      {
+        "name": "tsc-no-emit",
+        "kind": "process",
+        "verificationMethod": "exit-code",
+        "passed": true,
+        "timedOut": false,
+        "skipped": false,
+        "skippedReason": null,
+        "exitCode": 0,
+        "outputSample": "",
+        "durationMs": 1133
+      },
+      {
+        "name": "home-page-responds",
+        "kind": "http-probe",
+        "verificationMethod": "http-status",
+        "passed": true,
+        "timedOut": false,
+        "skipped": false,
+        "skippedReason": null,
+        "exitCode": null,
+        "outputSample": "HTTP 200\n\u003C!DOCTYPE html\u003E\u003Chtml lang=\u0022en\u0022 class=\u0022dark\u0022\u003E\u003Chead\u003E\u003Cmeta charSet=\u0022utf-8\u0022/\u003E\u003Cmeta name=\u0022viewport\u0022 content=\u0022width=device-width, initial-scale=1\u0022/\u003E\u003Clink rel=\u0022stylesheet\u0022 href=\u0022/_next/static/chunks/%5Broot-of-the-server%5D__0gqmcyu38l-36._.css\u0022 data-precedence=\u0022next_static/chunks/[root-of-the-server]__0gqmcyu38l-36._.css\u0022/\u003E\u003Clink rel=\u0022preload\u0022 as=\u0022script\u0022 fetchPriority=\u0022low\u0022 href=\u0022/_next/static/chunks/%5Bturbopack%5D_browser_dev_hmr-client_hmr-client_ts_0fb9-gqu7_t97._.js\u0022/\u003E\u003Cscript src=\u0022/_next/static/chunks/1daa_next_dist_compiled_react-dom_cjs_react-dom-client_development_0mp0cp_t-ezj9.js\u0022 async=\u0022\u0022\u003E\u003C/script\u003E\u003Cscript src=\u0022/_next/static/chunks/1q96_modules_next_dist_compiled_react-dom_cjs_react-dom_development_1sqry0_53krp4.js\u0022 async=\u0022\u0022\u003E\u003C/script\u003E\u003Cscript src=\u0022/_next/static/chunks/node_modules_next_dist_compiled_react-dom_0grqycjrj6mju._.js\u0022 async=\u0022\u0022\u003E\u003C/script\u003E\u003Cscript src=\u0022/_next/static/chunks/node_modules_next_dist_compiled_react-server-dom-turbopack_164kp-67asdr9._.js\u0022 async=\u0022\u0022\u003E\u003C/script\u003E\u003Cscript src=\u0022/_next/static/chunks/node_modules_next_dist_compiled_next-devtools_index_090k2jmam7qwg.js\u0022 async=\u0022\u0022\u003E\u003C/script\u003E\u003Cscript src=\u0022/_next/static/chunks/node_modules_next_dist_compiled_1amofcmz--cdp._.js\u0022 async=\u0022\u0022\u003E\u003C/script\u003E\u003Cscript src=\u0022/_next/static/chunks/node_modules_next_dist_client_1165-soo5tfpf._.js\u0022 async=\u0022\u0022\u003E\u003C/script\u003E\u003Cscript src=\u0022/_next/static/chunks/node_modules_next_dist_05y3oi5z9mc_3._.js\u0022 async=\u0022\u0022\u003E\u003C/script\u003E\u003Cscript src=\u0022/_next/static/chunks/node_modules_%40swc_helpers_cjs_1r9vbqwj2323d._.js\u0022 async=\u0022\u0022\u003E\u003C/script\u003E\u003Cscript src=\u0022/_next/static/chunks/_1anvha4rlo79g._.js\u0022 async=\u0022\u0022\u003E\u003C/script\u003E\u003Cscript src=\u0022/_next/static/chunks/turbopack-_11q0wbt2n0d9y._.js\u0022 async=\u0022\u0022\u003E\u003C/script\u003E\u003Cscript src=\u0022/_next/static/chunks/_219uq1sj0q91c._.js\u0022 async=\u0022\u0022\u003E\u003C/script\u003E\u003Cscript src=\u0022/_next/static/chunks/_1-vykoy9vi639._.js\u0022 async=\u0022\u0022\u003E\u003C/script\u003E\u003Cscript src=\u0022/_next/static/chunks/_0j-_hasd-n4bg._.js\u0022 async=\u0022\u0022\u003E\u003C/script\u003E\u003Ctitle\u003ECornerMan AI: your striking, broken down\u003C/title\u003E\u003Cmeta name=\u0022description\u0022 content=\u0022Upload your bag work, pad rounds, or sparring. CornerMan tracks every punch, flags dropped guards and telegraphs, and gives you corner advice and drills.\u0022/\u003E\u003Clink rel=\u0022icon\u0022 href=\u0022/favicon.ico?favicon.2vob68tjqpejf.ico\u0022 sizes=\u0022256x256\u0022 type=\u0022image/x-icon\u0022/\u003E\u003Cmeta name=\u0022next-size-adjust\u0022 content=\u0022\u0022/\u003E\u003Cscript src=\u0022/_next/static/chunks/node_modules_next_dist_build_polyfills_polyfill-nomodule.js\u0022 noModule=\u0022\u0022\u003E\u003C/script\u003E\u003C/head\u003E\u003Cbody class=\u0022geist_a71539c9-module__T19VSG__variable geist_mono_8d43a2aa-module__8Li5zG__variable barlow_condensed_e58826dd-module__nM-89a__variable antialiased min-h-screen\u0022\u003E\u003Cdiv hidden=\u0022\u0022\u003E\u003C!--$--\u003E\u003C!--/$--\u003E\u003C/div\u003E\u003Cdiv class=\u0022overflow-x-clip\u0022\u003E\u003Cheader class=\u0022mx-auto flex h-18 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8\u0022\u003E\u003Cspan class=\u0022inline-flex items-center gap-2.5 \u0022\u003E\u003Csvg viewBox=\u00220 0 40 40\u0022 class=\u0022h-8 w-8\u0022 aria-hidden=\u0022true\u0022\u003E\u003Cpolygon points=\u002212,1 28,1 39,12 39,28 28,39 12,39 1,28 1,12\u0022 fill=\u0022#e8202f\u0022\u003E\u003C/polygon\u003E\u003Cpolygon points=\u002213.5,5.5 26.5,5.5 34.5,13.5 34.5,26.5 26.5,34.5 13.5,34.5 5.5,26.5 5.5,13.5\u0022 fill=\u0022none\u0022 stroke=\u0022#07070a\u0022 stroke-width=\u00221.5\u0022\u003E\u003C/polygon\u003E\u003Cpath d=\u0022M24.5 14.5a6.5 6.5 0 1 0 0 11\u0022 fill=\u0022none\u0022 stroke=\u0022#fff\u0022 stroke-width=\u00223.4\u0022 stroke-linecap=\u0022square\u0022\u003E\u003C/path\u003E\u003C/svg\u003E\u003Cspan class=\u0022display text-2xl leading-none text-chalk \u0022\u003ECorner\u003Cspan class=\u0022text-blood\u0022\u003EMan\u003C/span\u003E\u003C/span\u003E\u003C/span\u003E\u003Cnav class=\u0022flex items-center gap-2 sm:gap-4\u0022\u003E\u003Ca class=\u0022px-2 font-display text-[0.9375rem] font-bold uppercase tracking-wider text-mute hover:text-chalk\u0022 href=\u0022/login\u0022\u003ESign in\u003C/a\u003E\u003Ca class=\u0022inline-flex items-center justify-center gap-2 whitespace-nowrap font-display font-bold uppercase tracking-wider\n    transition-colors duration-150 cursor-pointer\n    focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-chalk\n    disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none\n    chamfer bg-blood text-white hover:bg-[#ff3040] active:bg-blood-deep shadow-[0_0_28px_-6px_rgb(232_32_47/0.7)] h-8 px-3 text-[0.8125rem] \u0022 href=\u0022/register\u0022\u003EStart free\u003C/a\u003E\u003C/nav\u003E\u003C/header\u003E\u003Csection class=\u0022mx-auto grid max-w-7xl grid-cols-1 items-center gap-\n\u2026[truncated]",
+        "durationMs": 3613
+      },
+      {
+        "name": "tests-pass",
+        "kind": "process",
+        "verificationMethod": "test-results",
+        "passed": true,
+        "timedOut": false,
+        "skipped": false,
+        "skippedReason": null,
+        "exitCode": 0,
+        "outputSample": "\r\n\u003E frontend@0.1.0 test\r\n\u003E vitest run\r\n\r\n(node:102144) [DEP0205] DeprecationWarning: \u0060module.register()\u0060 is deprecated. Use \u0060module.registerHooks()\u0060 instead.\r\n(Use \u0060node --trace-deprecation ...\u0060 to show where the warning was created)\r\n\r\n RUN  v5.1.0 C:/Users/smit3/CornerMan-AI/frontend\r\n\r\n\r\n Test Files  5 passed (5)\r\n      Tests  29 passed (29)\r\n   Start at  18:01:48\r\n   Duration  224ms (transform 57%, import 17%, tests 16%, worker 9%)\r\n\r\n",
+        "durationMs": 1223,
+        "testResults": {
+          "testFramework": "vitest",
+          "runnerDetectedFrom": "package_json",
+          "testsTotal": 29,
+          "testsPassed": 29,
+          "testsFailed": 0,
+          "testsSkipped": 0,
+          "parseFailed": false
+        }
+      }
+    ],
+    "executions": [
+      {
+        "source": "setup[0]",
+        "resolvedExecutable": "C:\\Program Files\\nodejs\\npm.CMD",
+        "args": [
+          "ci"
+        ],
+        "cwd": "C:\\Users\\smit3\\CornerMan-AI\\frontend",
+        "env": {},
+        "prependPath": [],
+        "platform": "win32"
+      },
+      {
+        "source": "tsc-no-emit",
+        "resolvedExecutable": "C:\\Program Files\\nodejs\\npx.CMD",
+        "args": [
+          "tsc",
+          "--noEmit"
+        ],
+        "cwd": "C:\\Users\\smit3\\CornerMan-AI\\frontend",
+        "env": {},
+        "prependPath": [],
+        "platform": "win32"
+      },
+      {
+        "source": "home-page-responds",
+        "resolvedExecutable": "C:\\Program Files\\nodejs\\npm.CMD",
+        "args": [
+          "run",
+          "dev"
+        ],
+        "cwd": "C:\\Users\\smit3\\CornerMan-AI\\frontend",
+        "env": {},
+        "prependPath": [],
+        "platform": "win32"
+      },
+      {
+        "source": "tests-pass",
+        "resolvedExecutable": "C:\\Program Files\\nodejs\\npm.CMD",
+        "args": [
+          "test"
+        ],
+        "cwd": "C:\\Users\\smit3\\CornerMan-AI\\frontend",
+        "env": {},
+        "prependPath": [],
+        "platform": "win32"
+      }
+    ]
+  }
+}
