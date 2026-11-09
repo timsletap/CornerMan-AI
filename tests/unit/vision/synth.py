@@ -89,20 +89,28 @@ def sequence(
     n_frames: int,
     people: list[dict[int, np.ndarray]],
     meta: VideoMeta | None = None,
+    track_ids: list[int | dict[int, int] | None] | None = None,
 ) -> Poses:
-    """Poses from per-person {frame_number: (17, 3) keypoints} maps."""
+    """Poses from per-person {frame_number: (17, 3) keypoints} maps.
+
+    ``track_ids`` gives each person a tracker id, or a {frame_number: id} map for a
+    person whose id changes; by default detections have no id.
+    """
     meta = meta or VideoMeta(fps=FPS, total_frames=n_frames, width=WIDTH, height=HEIGHT)
     rows = []
     for f in range(n_frames):
-        for person in people:
+        for i, person in enumerate(people):
             if f not in person:
                 continue
+            tid = track_ids[i] if track_ids is not None else None
+            if isinstance(tid, dict):
+                tid = tid.get(f)
             kps = person[f]
             rows.append(
                 {
                     "frame_number": f,
                     "timestamp_ms": int((f / meta.fps) * 1000),
-                    "track_id": None,
+                    "track_id": tid,
                     "kp_x": [float(v) for v in kps[:, 0]],
                     "kp_y": [float(v) for v in kps[:, 1]],
                     "kp_conf": [float(v) for v in kps[:, 2]],

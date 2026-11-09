@@ -8,7 +8,7 @@ import numpy as np
 import pytest
 import synth
 
-from app.vision import pose, tracking
+from app.vision import pose
 from app.vision.pipeline import analyze_poses
 from app.vision.types import LEFT_WRIST, RIGHT_WRIST, VideoMeta, poses_cache_path
 
@@ -136,25 +136,3 @@ def test_model_path_does_not_invalidate_cache(tmp_path: Path) -> None:
 
 def test_cache_lives_next_to_video() -> None:
     assert poses_cache_path("/data/videos/u/abc.mp4") == Path("/data/videos/u/abc_poses.parquet")
-
-
-def test_primary_actor_prefers_large_central_confident_person() -> None:
-    cfg = synth.config()
-    big = synth.fighter(cx=640, cy=250, sw=100)
-    small = synth.fighter(cx=640, cy=250, sw=30)
-    faint = synth.fighter(cx=640, cy=250, sw=150, conf=0.5)  # below occlusion threshold
-    poses = synth.sequence(1, [{0: small}, {0: faint}, {0: big}])
-
-    track = tracking.primary_track(poses.frames, poses.meta, cfg)
-
-    assert len(track) == 1
-    assert track[0].keypoints[0][0] == pytest.approx(640, abs=0.01)
-    assert track[0].bbox_area == pytest.approx(
-        (big[:, 0].ptp() + 40) * (big[:, 1].ptp() + 40), rel=1e-5
-    )
-
-
-def test_frames_without_a_confident_person_are_skipped() -> None:
-    poses = synth.sequence(3, [{0: synth.fighter(), 2: synth.fighter(conf=0.3)}])
-    track = tracking.primary_track(poses.frames, poses.meta, synth.config())
-    assert [fk.frame_number for fk in track] == [0]

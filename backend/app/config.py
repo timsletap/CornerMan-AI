@@ -47,6 +47,11 @@ class Settings(BaseSettings):
     OCCLUSION_PAUSE_SECONDS: float = 0.5
     YOLO_MODEL_NAME: str = "yolov8m-pose.pt"
     VISION_FRAME_SKIP: int = 1
+    # Identity tracking (VIS-09)
+    TRACKER_CONFIG: str = "bytetrack.yaml"
+    TARGET_SELECT_SECONDS: float = 2.0  # window at the start used to pick the fighter
+    REACQUIRE_IOU: float = 0.3  # min bbox overlap to take over a new track id
+    REACQUIRE_SECONDS: float = 1.0  # how long after losing the fighter overlap is trusted
 
     # Video Storage
     VIDEO_UPLOAD_DIR: str = "uploads/videos"

@@ -64,6 +64,7 @@ class AnalysisSessionResponse(BaseModel):
     guard_score: float | None
     coach_feedback: str | None
     annotated_video_path: str | None
+    target_track_id: int | None = None
     processing_started_at: datetime | None
     processing_completed_at: datetime | None
     created_at: datetime
@@ -76,6 +77,14 @@ class AnalysisSessionDetailResponse(AnalysisSessionResponse):
     strike_events: list[StrikeEventResponse] = []
     error_flags: list[ErrorFlagResponse] = []
     drill_recommendations: list[DrillRecommendationResponse] = []
+
+
+class AnalyzeRequest(BaseModel):
+    """Optional body for POST /videos/{id}/analyze."""
+
+    target_track_id: int | None = Field(
+        default=None, description="Tracker id of the fighter to analyze, from a previous run"
+    )
 
 
 class FeedbackCreateRequest(BaseModel):

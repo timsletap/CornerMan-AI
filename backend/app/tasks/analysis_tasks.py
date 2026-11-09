@@ -94,7 +94,7 @@ def run_analysis_pipeline(self, session_id: str, video_id: str) -> dict:
         # 2. Resolve video path and run vision pipeline
         video_path = get_video_path(video)
         logger.info("Running vision analysis on %s for session %s", video_path, session_id)
-        vision_json = run_vision_analysis(video_path, sid)
+        vision_json = run_vision_analysis(video_path, sid, session.target_track_id)
 
         # 3. Persist vision results on session
         update_progress(session_id, "persisting", 0.90, "Saving analysis results...")
@@ -110,6 +110,7 @@ def run_analysis_pipeline(self, session_id: str, video_id: str) -> dict:
         if annotated_path:
             session.annotated_video_path = annotated_path
         session.poses_cache_path = vision_json.get("poses_cache_path")
+        session.target_track_id = vision_json.get("target_track_id")
 
         # 4. Persist StrikeEvent rows
         strike_events_data = vision_json.get("strike_events", [])

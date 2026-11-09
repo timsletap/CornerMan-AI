@@ -21,6 +21,7 @@ from app.models.video import Video
 from app.schemas.analysis import (
     AnalysisSessionDetailResponse,
     AnalysisSessionResponse,
+    AnalyzeRequest,
     DisputeRequest,
     FeedbackCreateRequest,
     FeedbackResponse,
@@ -42,6 +43,7 @@ router = APIRouter(tags=["Analysis"])
 )
 def trigger_analysis(
     video_id: uuid.UUID,
+    body: AnalyzeRequest | None = None,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> AnalysisSession:
@@ -66,6 +68,7 @@ def trigger_analysis(
         user_id=current_user.id,
         video_id=video.id,
         status=AnalysisStatus.QUEUED,
+        target_track_id=body.target_track_id if body else None,
     )
     db.add(session)
     db.commit()

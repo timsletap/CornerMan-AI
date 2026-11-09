@@ -140,7 +140,8 @@ def test_evaluate_from_cached_poses(clip_dir: Path) -> None:
     assert report.detection.fp == 0
     assert report.detection.tp == len(runs[0].strikes)
     assert report.strike_type.macro_f1 == 1.0
-    assert report.identity_switches is None or report.identity_switches.total == 0
+    assert report.identity_switches is not None
+    assert report.identity_switches.per_clip == {"c1": 0}
     assert report.throughput.stage1_x_realtime is None  # poses came from the cache
     assert report.throughput.stages23_x_realtime is not None
     assert report.config_hash.startswith("sha256:")
