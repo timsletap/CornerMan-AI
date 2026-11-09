@@ -284,17 +284,3 @@ yt-dlp downloads H.264 and transcodes automatically.
 | **Go deeper.** Calibrated confidence, active-learning labeling, optimised inference, on-device shadowbox mode | Not started |
 
 The full plan, with acceptance criteria per task, is in [`FRD.md`](FRD.md).
-
-## About the builder
-
-I'm **Smit Patel**. I fought for my MMA team and coached youth MMA and wrestling, and
-CornerMan is the tool I wanted between sessions: something that watches the film as
-closely as a coach would and tells me the one thing to fix.
-
-That background is in the requirements more than the code. A jab is the lead hand, not a
-short punch. A telegraph happens before the punch starts, not at its peak. A guard drops
-during the punch, not at one frozen frame. Getting a computer to agree with those
-definitions, and then proving that it does on footage it has never seen, is what this
-project is about.
-
-[GitHub: @timsletap](https://github.com/timsletap)

@@ -1,0 +1,108 @@
+{
+  "planHash": "2111f5b74e2f73ec961ba275899dcc0aea5843eb3b73dee887d85eaeb02c3d91",
+  "phase": "baseline",
+  "recordedAtUtc": "2026-11-09T22:48:34.5646534Z",
+  "retryCount": 0,
+  "resetBaseline": false,
+  "complete": true,
+  "result": {
+    "setupSucceeded": true,
+    "setupDurationMs": 56191,
+    "setupFailureOutput": null,
+    "assertions": [
+      {
+        "name": "tsc-no-emit",
+        "kind": "process",
+        "verificationMethod": "exit-code",
+        "passed": true,
+        "timedOut": false,
+        "skipped": false,
+        "skippedReason": null,
+        "exitCode": 0,
+        "outputSample": "",
+        "durationMs": 4245
+      },
+      {
+        "name": "home-page-responds",
+        "kind": "http-probe",
+        "verificationMethod": "http-status",
+        "passed": true,
+        "timedOut": false,
+        "skipped": false,
+        "skippedReason": null,
+        "exitCode": null,
+        "outputSample": "HTTP 200\n\u003C!DOCTYPE html\u003E\u003Chtml lang=\u0022en\u0022 class=\u0022dark\u0022\u003E\u003Chead\u003E\u003Cmeta charSet=\u0022utf-8\u0022/\u003E\u003Cmeta name=\u0022viewport\u0022 content=\u0022width=device-width, initial-scale=1\u0022/\u003E\u003Clink rel=\u0022stylesheet\u0022 href=\u0022/_next/static/chunks/%5Broot-of-the-server%5D__374a491f._.css\u0022 data-precedence=\u0022next_static/chunks/[root-of-the-server]__374a491f._.css\u0022/\u003E\u003Clink rel=\u0022preload\u0022 as=\u0022script\u0022 fetchPriority=\u0022low\u0022 href=\u0022/_next/static/chunks/%5Bturbopack%5D_browser_dev_hmr-client_hmr-client_ts_956a0d3a._.js\u0022/\u003E\u003Cscript src=\u0022/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js\u0022 async=\u0022\u0022\u003E\u003C/script\u003E\u003Cscript src=\u0022/_next/static/chunks/node_modules_next_dist_compiled_react-server-dom-turbopack_9212ccad._.js\u0022 async=\u0022\u0022\u003E\u003C/script\u003E\u003Cscript src=\u0022/_next/static/chunks/node_modules_next_dist_compiled_next-devtools_index_1dd7fb59.js\u0022 async=\u0022\u0022\u003E\u003C/script\u003E\u003Cscript src=\u0022/_next/static/chunks/node_modules_next_dist_compiled_a0e4c7b4._.js\u0022 async=\u0022\u0022\u003E\u003C/script\u003E\u003Cscript src=\u0022/_next/static/chunks/node_modules_next_dist_client_17643121._.js\u0022 async=\u0022\u0022\u003E\u003C/script\u003E\u003Cscript src=\u0022/_next/static/chunks/node_modules_next_dist_f3530cac._.js\u0022 async=\u0022\u0022\u003E\u003C/script\u003E\u003Cscript src=\u0022/_next/static/chunks/node_modules_%40swc_helpers_cjs_d80fb378._.js\u0022 async=\u0022\u0022\u003E\u003C/script\u003E\u003Cscript src=\u0022/_next/static/chunks/_a0ff3932._.js\u0022 async=\u0022\u0022\u003E\u003C/script\u003E\u003Cscript src=\u0022/_next/static/chunks/turbopack-_23a915ee._.js\u0022 async=\u0022\u0022\u003E\u003C/script\u003E\u003Cscript src=\u0022/_next/static/chunks/node_modules_next_dist_be32b49c._.js\u0022 async=\u0022\u0022\u003E\u003C/script\u003E\u003Cscript src=\u0022/_next/static/chunks/src_app_favicon_ico_mjs_81d86e48._.js\u0022 async=\u0022\u0022\u003E\u003C/script\u003E\u003Cscript src=\u0022/_next/static/chunks/_9cfa35c5._.js\u0022 async=\u0022\u0022\u003E\u003C/script\u003E\u003Cscript src=\u0022/_next/static/chunks/src_app_layout_tsx_1cf6b850._.js\u0022 async=\u0022\u0022\u003E\u003C/script\u003E\u003Cscript src=\u0022/_next/static/chunks/_c59a2e46._.js\u0022 async=\u0022\u0022\u003E\u003C/script\u003E\u003Cscript src=\u0022/_next/static/chunks/src_app_page_tsx_00d02ea4._.js\u0022 async=\u0022\u0022\u003E\u003C/script\u003E\u003Cscript src=\u0022/_next/static/chunks/node_modules_next_dist_client_components_builtin_global-error_1cf6b850.js\u0022 async=\u0022\u0022\u003E\u003C/script\u003E\u003Cmeta name=\u0022next-size-adjust\u0022 content=\u0022\u0022/\u003E\u003Ctitle\u003ECornerMan AI: your striking, broken down\u003C/title\u003E\u003Cmeta name=\u0022description\u0022 content=\u0022Upload your bag work, pad rounds, or sparring. CornerMan tracks every punch, flags dropped guards and telegraphs, and gives you corner advice and drills.\u0022/\u003E\u003Clink rel=\u0022icon\u0022 href=\u0022/favicon.ico?favicon.0b3bf435.ico\u0022 sizes=\u0022256x256\u0022 type=\u0022image/x-icon\u0022/\u003E\u003Cscript src=\u0022/_next/static/chunks/node_modules_next_dist_build_polyfills_polyfill-nomodule.js\u0022 noModule=\u0022\u0022\u003E\u003C/script\u003E\u003C/head\u003E\u003Cbody class=\u0022geist_a71539c9-module__T19VSG__variable geist_mono_8d43a2aa-module__8Li5zG__variable barlow_condensed_e58826dd-module__nM-89a__variable antialiased min-h-screen\u0022\u003E\u003Cdiv hidden=\u0022\u0022\u003E\u003C!--$--\u003E\u003C!--/$--\u003E\u003C/div\u003E\u003Cdiv class=\u0022overflow-x-clip\u0022\u003E\u003Cheader class=\u0022mx-auto flex h-18 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8\u0022\u003E\u003Cspan class=\u0022inline-flex items-center gap-2.5 \u0022\u003E\u003Csvg viewBox=\u00220 0 40 40\u0022 class=\u0022h-8 w-8\u0022 aria-hidden=\u0022true\u0022\u003E\u003Cpolygon points=\u002212,1 28,1 39,12 39,28 28,39 12,39 1,28 1,12\u0022 fill=\u0022#e8202f\u0022\u003E\u003C/polygon\u003E\u003Cpolygon points=\u002213.5,5.5 26.5,5.5 34.5,13.5 34.5,26.5 26.5,34.5 13.5,34.5 5.5,26.5 5.5,13.5\u0022 fill=\u0022none\u0022 stroke=\u0022#07070a\u0022 stroke-width=\u00221.5\u0022\u003E\u003C/polygon\u003E\u003Cpath d=\u0022M24.5 14.5a6.5 6.5 0 1 0 0 11\u0022 fill=\u0022none\u0022 stroke=\u0022#fff\u0022 stroke-width=\u00223.4\u0022 stroke-linecap=\u0022square\u0022\u003E\u003C/path\u003E\u003C/svg\u003E\u003Cspan class=\u0022display text-2xl leading-none text-chalk \u0022\u003ECorner\u003Cspan class=\u0022text-blood\u0022\u003EMan\u003C/span\u003E\u003C/span\u003E\u003C/span\u003E\u003Cnav class=\u0022flex items-center gap-2 sm:gap-4\u0022\u003E\u003Ca class=\u0022px-2 font-display text-[0.9375rem] font-bold uppercase tracking-wider text-mute hover:text-chalk\u0022 href=\u0022/login\u0022\u003ESign in\u003C/a\u003E\u003Ca class=\u0022inline-flex items-center justify-center gap-2 whitespace-nowrap font-display font-bold uppercase tracking-wider\n    transition-colors duration-150 cursor-pointer\n    focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-chalk\n    disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none\n    chamfer bg-blood text-white hover:bg-[#ff3040] active:bg-blood-deep shadow-[0_0_28px_-6px_rgb(232_32_47/0.7)] h-8 px-3 text-[0.8125rem] \u0022 href=\u0022/register\u0022\u003EStart free\u003C/a\u003E\u003C/nav\u003E\u003C/header\u003E\u003Csection clas\n\u2026[truncated]",
+        "durationMs": 8114
+      },
+      {
+        "name": "tests-pass",
+        "kind": "process",
+        "verificationMethod": "test-results",
+        "passed": true,
+        "timedOut": false,
+        "skipped": false,
+        "skippedReason": null,
+        "exitCode": 0,
+        "outputSample": "\r\n\u003E frontend@0.1.0 test\r\n\u003E vitest run\r\n\r\n\r\n\u001B[1m\u001B[46m RUN \u001B[49m\u001B[22m \u001B[36mv3.2.4 \u001B[39m\u001B[90mC:/Users/smit3/CornerMan-AI/frontend\u001B[39m\r\n\r\n(node:118496) [DEP0205] DeprecationWarning: \u0060module.register()\u0060 is deprecated. Use \u0060module.registerHooks()\u0060 instead.\r\n(Use \u0060node --trace-deprecation ...\u0060 to show where the warning was created)\r\n \u001B[32m\u2713\u001B[39m src/lib/__tests__/api.test.ts \u001B[2m(\u001B[22m\u001B[2m3 tests\u001B[22m\u001B[2m)\u001B[22m\u001B[32m 11\u001B[2mms\u001B[22m\u001B[39m\r\n \u001B[32m\u2713\u001B[39m src/lib/__tests__/skeleton-pose.test.ts \u001B[2m(\u001B[22m\u001B[2m5 tests\u001B[22m\u001B[2m)\u001B[22m\u001B[32m 4\u001B[2mms\u001B[22m\u001B[39m\r\n \u001B[32m\u2713\u001B[39m src/lib/__tests__/upload-rules.test.ts \u001B[2m(\u001B[22m\u001B[2m7 tests\u001B[22m\u001B[2m)\u001B[22m\u001B[32m 4\u001B[2mms\u001B[22m\u001B[39m\r\n \u001B[32m\u2713\u001B[39m src/lib/__tests__/fight-stats.test.ts \u001B[2m(\u001B[22m\u001B[2m8 tests\u001B[22m\u001B[2m)\u001B[22m\u001B[32m 15\u001B[2mms\u001B[22m\u001B[39m\r\n \u001B[32m\u2713\u001B[39m src/lib/__tests__/session-events.test.ts \u001B[2m(\u001B[22m\u001B[2m6 tests\u001B[22m\u001B[2m)\u001B[22m\u001B[32m 31\u001B[2mms\u001B[22m\u001B[39m\r\n\r\n\u001B[2m Test Files \u001B[22m \u001B[1m\u001B[32m5 passed\u001B[39m\u001B[22m\u001B[90m (5)\u001B[39m\r\n\u001B[2m      Tests \u001B[22m \u001B[1m\u001B[32m29 passed\u001B[39m\u001B[22m\u001B[90m (29)\u001B[39m\r\n\u001B[2m   Start at \u001B[22m 17:48:33\r\n\u001B[2m   Duration \u001B[22m 1.03s\u001B[2m (transform 275ms, setup 0ms, collect 515ms, tests 66ms, environment 1ms, prepare 1.03s)\u001B[22m\r\n\r\n",
+        "durationMs": 4234,
+        "testResults": {
+          "testFramework": "vitest",
+          "runnerDetectedFrom": "package_json",
+          "testsTotal": 29,
+          "testsPassed": 29,
+          "testsFailed": 0,
+          "testsSkipped": 0,
+          "parseFailed": false
+        }
+      }
+    ],
+    "executions": [
+      {
+        "source": "setup[0]",
+        "resolvedExecutable": "C:\\Program Files\\nodejs\\npm.CMD",
+        "args": [
+          "ci"
+        ],
+        "cwd": "C:\\Users\\smit3\\CornerMan-AI\\frontend",
+        "env": {},
+        "prependPath": [],
+        "platform": "win32"
+      },
+      {
+        "source": "tsc-no-emit",
+        "resolvedExecutable": "C:\\Program Files\\nodejs\\npx.CMD",
+        "args": [
+          "tsc",
+          "--noEmit"
+        ],
+        "cwd": "C:\\Users\\smit3\\CornerMan-AI\\frontend",
+        "env": {},
+        "prependPath": [],
+        "platform": "win32"
+      },
+      {
+        "source": "home-page-responds",
+        "resolvedExecutable": "C:\\Program Files\\nodejs\\npm.CMD",
+        "args": [
+          "run",
+          "dev"
+        ],
+        "cwd": "C:\\Users\\smit3\\CornerMan-AI\\frontend",
+        "env": {},
+        "prependPath": [],
+        "platform": "win32"
+      },
+      {
+        "source": "tests-pass",
+        "resolvedExecutable": "C:\\Program Files\\nodejs\\npm.CMD",
+        "args": [
+          "test"
+        ],
+        "cwd": "C:\\Users\\smit3\\CornerMan-AI\\frontend",
+        "env": {},
+        "prependPath": [],
+        "platform": "win32"
+      }
+    ]
+  }
+}
