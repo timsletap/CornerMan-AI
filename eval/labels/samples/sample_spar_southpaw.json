@@ -5,11 +5,11 @@
   "fighter": {"stance": "southpaw", "track_hint": "left of frame at t=0, red gloves"},
   "strikes": [
     {"t_ms": 2050, "hand": "right", "type": "jab", "target": "head"},
-    {"t_ms": 2380, "hand": "left", "type": "cross", "target": "head"},
+    {"t_ms": 2383, "hand": "left", "type": "cross", "target": "head"},
     {"t_ms": 5100, "hand": "left", "type": "uppercut", "target": "head"}
   ],
   "errors": [
-    {"t_ms": 2380, "type": "dropped_guard", "hand": "right"}
+    {"t_ms": 2383, "type": "dropped_guard", "hand": "right"}
   ],
   "notes": [
     {"start_ms": 3400, "end_ms": 4200, "reason": "clinch, strikes ambiguous"}

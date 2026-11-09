@@ -1,0 +1,35 @@
+[
+  {
+    "name": "strike",
+    "color": "#e53935",
+    "type": "points",
+    "attributes": [
+      {"name": "hand", "input_type": "radio", "mutable": false, "values": ["left", "right"]},
+      {"name": "type", "input_type": "select", "mutable": false, "values": ["jab", "cross", "hook", "uppercut", "body_shot"]},
+      {"name": "target", "input_type": "radio", "mutable": false, "values": ["head", "body"]}
+    ]
+  },
+  {
+    "name": "error",
+    "color": "#fdd835",
+    "type": "points",
+    "attributes": [
+      {"name": "hand", "input_type": "radio", "mutable": false, "values": ["left", "right"]},
+      {"name": "type", "input_type": "radio", "mutable": false, "values": ["dropped_guard", "chicken_wing"]}
+    ]
+  },
+  {
+    "name": "skip_start",
+    "color": "#757575",
+    "type": "points",
+    "attributes": [
+      {"name": "reason", "input_type": "text", "mutable": false, "values": [""]}
+    ]
+  },
+  {
+    "name": "skip_end",
+    "color": "#bdbdbd",
+    "type": "points",
+    "attributes": []
+  }
+]
