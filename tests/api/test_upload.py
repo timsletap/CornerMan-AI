@@ -54,7 +54,7 @@ def test_upload_within_limit_is_stored(
     stored = files_under(upload_dir)
     assert len(stored) == 1
     assert stored[0].suffix == ".mp4"
-    assert "tmp" not in stored[0].parts
+    assert "tmp" not in stored[0].relative_to(upload_dir).parts
     assert stored[0].stat().st_size == MB
     fake_db.add.assert_called_once()
 
