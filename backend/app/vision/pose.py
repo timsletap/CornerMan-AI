@@ -152,6 +152,30 @@ def read_poses(path: Path, cfg: VisionConfig, meta: VideoMeta) -> Poses | None:
     return Poses(meta=meta, frames=table.cast(POSES_SCHEMA).to_pandas())
 
 
+def read_poses_file(path: Path) -> Poses:
+    """Load a poses cache on its own, taking the video metadata stored in the file.
+
+    For eval fixtures, where the poses are committed but the video is not. Raises
+    ValueError when the file has no CornerMan metadata.
+    """
+    table = pq.read_table(path)
+    stored = {
+        k.decode().removeprefix("cornerman."): v.decode()
+        for k, v in (table.schema.metadata or {}).items()
+        if k.startswith(b"cornerman.")
+    }
+    try:
+        meta = VideoMeta(
+            fps=float(stored["fps"]),
+            total_frames=int(stored["total_frames"]),
+            width=int(stored["width"]),
+            height=int(stored["height"]),
+        )
+    except (KeyError, ValueError) as exc:
+        raise ValueError(f"{path} is not a CornerMan poses cache: {exc}") from exc
+    return Poses(meta=meta, frames=table.cast(POSES_SCHEMA).to_pandas())
+
+
 def probe_meta(video_path: str) -> VideoMeta:
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
