@@ -4,35 +4,12 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/context/auth-context";
+import { AuthShell } from "@/components/auth/auth-shell";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-
-const STANCE_OPTIONS = [
-  { value: "orthodox", label: "Orthodox" },
-  { value: "southpaw", label: "Southpaw" },
-  { value: "switch", label: "Switch" },
-];
-
-const WEIGHT_OPTIONS = [
-  { value: "strawweight", label: "Strawweight" },
-  { value: "flyweight", label: "Flyweight" },
-  { value: "bantamweight", label: "Bantamweight" },
-  { value: "featherweight", label: "Featherweight" },
-  { value: "lightweight", label: "Lightweight" },
-  { value: "welterweight", label: "Welterweight" },
-  { value: "middleweight", label: "Middleweight" },
-  { value: "light_heavyweight", label: "Light Heavyweight" },
-  { value: "heavyweight", label: "Heavyweight" },
-];
-
-const EXP_OPTIONS = [
-  { value: "beginner", label: "Beginner" },
-  { value: "intermediate", label: "Intermediate" },
-  { value: "advanced", label: "Advanced" },
-  { value: "pro", label: "Pro" },
-];
+import { ErrorNote } from "@/components/ui/spinner";
+import { EXP_OPTIONS, STANCE_OPTIONS, WEIGHT_OPTIONS } from "@/lib/fighter-options";
 
 export function RegisterForm() {
   const { register } = useAuth();
@@ -68,30 +45,30 @@ export function RegisterForm() {
       await register(data as Parameters<typeof register>[0]);
       router.push("/dashboard");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Registration failed");
+      setError(err instanceof Error ? err.message : "Could not create the account");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <Card className="w-full max-w-md mx-auto">
-      <div className="text-center mb-6">
-        <div className="h-12 w-12 rounded-xl bg-red-600 flex items-center justify-center font-bold text-white text-xl mx-auto mb-3">
-          CM
-        </div>
-        <h1 className="text-2xl font-bold text-white">Create Account</h1>
-        <p className="text-zinc-400 text-sm mt-1">Set up your fighter profile</p>
-      </div>
-
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {error && (
-          <div className="rounded-lg bg-red-900/30 border border-red-800 p-3 text-sm text-red-400">
-            {error}
-          </div>
-        )}
+    <AuthShell
+      eyebrow="Join the camp"
+      title="Weigh in"
+      footer={
+        <>
+          Already have an account?{" "}
+          <Link href="/login" className="font-medium text-chalk underline decoration-blood underline-offset-4 hover:text-blood">
+            Sign in
+          </Link>
+        </>
+      }
+    >
+      <form onSubmit={handleSubmit} className="space-y-5">
+        {error && <ErrorNote>{error}</ErrorNote>}
         <Input
-          label="Full Name"
+          label="Full name"
+          autoComplete="name"
           value={form.full_name}
           onChange={(e) => update("full_name", e.target.value)}
           placeholder="Your name"
@@ -100,6 +77,7 @@ export function RegisterForm() {
         <Input
           label="Email"
           type="email"
+          autoComplete="email"
           value={form.email}
           onChange={(e) => update("email", e.target.value)}
           placeholder="fighter@example.com"
@@ -108,44 +86,50 @@ export function RegisterForm() {
         <Input
           label="Password"
           type="password"
+          autoComplete="new-password"
           value={form.password}
           onChange={(e) => update("password", e.target.value)}
-          placeholder="Min 8 characters"
+          placeholder="At least 8 characters"
           minLength={8}
           required
         />
-        <Select
-          label="Stance"
-          options={STANCE_OPTIONS}
-          placeholder="Select stance (optional)"
-          value={form.stance}
-          onChange={(e) => update("stance", e.target.value)}
-        />
-        <Select
-          label="Weight Class"
-          options={WEIGHT_OPTIONS}
-          placeholder="Select weight class (optional)"
-          value={form.weight_class}
-          onChange={(e) => update("weight_class", e.target.value)}
-        />
-        <Select
-          label="Experience Level"
-          options={EXP_OPTIONS}
-          placeholder="Select experience (optional)"
-          value={form.experience_level}
-          onChange={(e) => update("experience_level", e.target.value)}
-        />
-        <Button type="submit" disabled={loading} className="w-full">
-          {loading ? "Creating account..." : "Create Account"}
+
+        <fieldset className="space-y-4 border-t border-line pt-5">
+          <legend className="eyebrow float-left mb-4 w-full text-chalk">
+            Tale of the tape <span className="text-dim">· optional</span>
+          </legend>
+          <div className="clear-both grid gap-4 sm:grid-cols-2">
+            <Select
+              label="Stance"
+              options={STANCE_OPTIONS}
+              placeholder="Select"
+              value={form.stance}
+              onChange={(e) => update("stance", e.target.value)}
+            />
+            <Select
+              label="Experience"
+              options={EXP_OPTIONS}
+              placeholder="Select"
+              value={form.experience_level}
+              onChange={(e) => update("experience_level", e.target.value)}
+            />
+          </div>
+          <Select
+            label="Weight class"
+            options={WEIGHT_OPTIONS}
+            placeholder="Select"
+            value={form.weight_class}
+            onChange={(e) => update("weight_class", e.target.value)}
+          />
+          <p className="text-xs text-dim">
+            Your stance and level shape how the coaching is written for you.
+          </p>
+        </fieldset>
+
+        <Button type="submit" size="lg" disabled={loading} className="w-full">
+          {loading ? "Creating account..." : "Create account"}
         </Button>
       </form>
-
-      <p className="text-center text-sm text-zinc-400 mt-4">
-        Already have an account?{" "}
-        <Link href="/login" className="text-red-400 hover:text-red-300">
-          Sign in
-        </Link>
-      </p>
-    </Card>
+    </AuthShell>
   );
 }

@@ -1,7 +1,8 @@
 "use client";
 
+import { formatClock } from "@/lib/format";
+import { strikeMeta } from "@/lib/strike-meta";
 import type { StrikeEventResponse } from "@/lib/types";
-import { Badge } from "@/components/ui/badge";
 
 interface Props {
   strikes: StrikeEventResponse[];
@@ -9,56 +10,54 @@ interface Props {
   onSeek: (timeMs: number) => void;
 }
 
-function formatTime(ms: number) {
-  const s = Math.floor(ms / 1000);
-  const m = Math.floor(s / 60);
-  const sec = s % 60;
-  return `${m}:${sec.toString().padStart(2, "0")}`;
-}
-
-const typeColors: Record<string, "red" | "blue" | "yellow" | "green" | "orange" | "zinc"> = {
-  jab: "blue",
-  cross: "red",
-  hook: "orange",
-  uppercut: "yellow",
-  body_shot: "green",
-  elbow: "red",
-  knee: "red",
-  kick: "orange",
-  other: "zinc",
-};
-
+/** Every strike in order. Click a row to jump the video to that punch. */
 export function StrikeTimeline({ strikes, currentTimeMs, onSeek }: Props) {
   if (strikes.length === 0) {
-    return <p className="text-sm text-zinc-500">No strikes detected</p>;
+    return <p className="text-sm text-mute">No strikes were detected in this clip.</p>;
   }
 
+  const topSpeed = Math.max(...strikes.map((s) => s.velocity ?? 0), 0);
+
   return (
-    <div className="space-y-1 max-h-80 overflow-y-auto pr-1">
-      {strikes.map((s) => {
-        const isActive = Math.abs(s.timestamp_ms - currentTimeMs) < 500;
+    <ol className="max-h-96 space-y-px overflow-y-auto pr-1">
+      {strikes.map((s, i) => {
+        const meta = strikeMeta(s.strike_type);
+        const isActive = Math.abs(s.timestamp_ms - currentTimeMs) < 400;
         return (
-          <button
-            key={s.id}
-            onClick={() => onSeek(s.timestamp_ms)}
-            className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors
-              ${isActive ? "bg-red-900/30 border border-red-800" : "hover:bg-zinc-800/50"}`}
-          >
-            <span className="text-xs text-zinc-500 font-mono w-10 flex-shrink-0">
-              {formatTime(s.timestamp_ms)}
-            </span>
-            <Badge color={typeColors[s.strike_type] || "zinc"}>
-              {s.strike_type.replace("_", " ")}
-            </Badge>
-            <span className="text-xs text-zinc-400 capitalize">{s.hand}</span>
-            {s.velocity && (
-              <span className="text-xs text-zinc-500 ml-auto">
-                {s.velocity.toFixed(1)} u/s
+          <li key={s.id}>
+            <button
+              onClick={() => onSeek(s.timestamp_ms)}
+              className={`grid w-full cursor-pointer grid-cols-[1.75rem_2.75rem_6rem_2.5rem_1fr] items-center gap-2 border-l-2 px-2 py-2 text-left transition-colors
+                ${isActive ? "border-chalk bg-white/10" : "border-transparent hover:bg-white/5"}`}
+            >
+              <span className="font-mono text-xs text-dim">{i + 1}</span>
+              <span className="font-mono text-xs text-mute">{formatClock(s.timestamp_ms)}</span>
+              <span className="flex items-center gap-2 font-display text-lg font-bold uppercase italic text-chalk">
+                <span className="h-3.5 w-1" style={{ backgroundColor: meta.color }} />
+                {meta.label}
               </span>
-            )}
-          </button>
+              <span className="font-mono text-[0.6875rem] uppercase text-mute">
+                {s.hand === "left" ? "L" : "R"}
+              </span>
+              {s.velocity !== null && topSpeed > 0 ? (
+                <span className="flex items-center gap-2">
+                  <span className="h-1 flex-1 bg-line">
+                    <span
+                      className="block h-full bg-chalk/70"
+                      style={{ width: `${(s.velocity / topSpeed) * 100}%` }}
+                    />
+                  </span>
+                  <span className="w-9 text-right font-mono text-xs text-mute">
+                    {s.velocity.toFixed(1)}
+                  </span>
+                </span>
+              ) : (
+                <span />
+              )}
+            </button>
+          </li>
         );
       })}
-    </div>
+    </ol>
   );
 }

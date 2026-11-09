@@ -1,19 +1,18 @@
 "use client";
 
 import type { ProgressResponse } from "@/lib/types";
-import { Card } from "@/components/ui/card";
+import { CheckIcon } from "@/components/ui/icons";
 
 const PIPELINE_STEPS = [
-  { key: "initializing", label: "Loading Model", icon: "01" },
-  { key: "pose_extraction", label: "Tracking Poses", icon: "02" },
-  { key: "strike_detection", label: "Detecting Strikes", icon: "03" },
-  { key: "guard_analysis", label: "Guard Analysis", icon: "04" },
-  { key: "telegraph_detection", label: "Telegraph Detection", icon: "05" },
-  { key: "rendering", label: "Rendering Overlay", icon: "06" },
-  { key: "persisting", label: "Saving Results", icon: "07" },
-  { key: "coaching", label: "AI Coaching", icon: "08" },
-  { key: "drills", label: "Mapping Drills", icon: "09" },
-  { key: "complete", label: "Complete", icon: "10" },
+  { key: "initializing", label: "Loading the pose model" },
+  { key: "pose_extraction", label: "Tracking your body frame by frame" },
+  { key: "strike_detection", label: "Finding every punch" },
+  { key: "guard_analysis", label: "Checking your guard" },
+  { key: "telegraph_detection", label: "Looking for tells" },
+  { key: "rendering", label: "Drawing the overlay video" },
+  { key: "persisting", label: "Saving the results" },
+  { key: "coaching", label: "Writing your corner advice" },
+  { key: "drills", label: "Picking drills" },
 ];
 
 interface Props {
@@ -21,101 +20,78 @@ interface Props {
 }
 
 export function AnalysisProgress({ progress }: Props) {
-  const currentStep = progress?.step || "queued";
   const pct = progress ? Math.round(progress.progress * 100) : 0;
-  const detail = progress?.detail || "Waiting in queue...";
-
-  const currentStepIdx = PIPELINE_STEPS.findIndex((s) => s.key === currentStep);
+  const detail = progress?.detail || "Waiting for a free corner. This usually starts in a few seconds.";
+  const stepIdx = progress
+    ? progress.step === "complete"
+      ? PIPELINE_STEPS.length
+      : PIPELINE_STEPS.findIndex((s) => s.key === progress.step)
+    : -1;
 
   return (
-    <Card className="space-y-6">
-      {/* Main progress bar */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-zinc-300">{detail}</span>
-          <span className="text-sm font-mono text-zinc-500">{pct}%</span>
+    <div className="hud-frame border border-line bg-panel/85">
+      <div className="p-6 sm:p-8">
+        <div className="flex items-end justify-between gap-4">
+          <div>
+            <p className="eyebrow text-blood">{progress ? "In progress" : "In queue"}</p>
+            <h1 className="display mt-1 text-4xl text-chalk sm:text-5xl">
+              Breaking down your film
+            </h1>
+          </div>
+          <p className="display text-6xl text-chalk sm:text-7xl" aria-hidden="true">
+            {pct}
+            <span className="text-3xl text-mute">%</span>
+          </p>
         </div>
-        <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
+
+        <div
+          role="progressbar"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={pct}
+          aria-label="Analysis progress"
+          className="relative mt-6 h-2 overflow-hidden bg-line"
+        >
           <div
-            className="h-full rounded-full transition-all duration-700 ease-out"
-            style={{
-              width: `${pct}%`,
-              background:
-                "linear-gradient(90deg, #ef4444 0%, #f97316 40%, #eab308 70%, #22c55e 100%)",
-            }}
+            className="h-full bg-gradient-to-r from-blood-deep via-blood to-gold transition-[width] duration-700 ease-out"
+            style={{ width: `${pct}%` }}
           />
+          <div className="absolute inset-y-0 left-0 w-1/4 animate-scan bg-gradient-to-r from-transparent via-white/40 to-transparent" />
         </div>
+        <p className="mt-3 text-sm text-mute" aria-live="polite">
+          {detail}
+        </p>
       </div>
 
-      {/* Pipeline step indicators */}
-      <div className="grid grid-cols-5 gap-2">
+      <ol className="grid border-t border-line sm:grid-cols-3">
         {PIPELINE_STEPS.map((step, idx) => {
-          let state: "done" | "active" | "pending" = "pending";
-          if (idx < currentStepIdx) state = "done";
-          else if (idx === currentStepIdx) state = "active";
-
+          const state = idx < stepIdx ? "done" : idx === stepIdx ? "active" : "pending";
           return (
-            <div
+            <li
               key={step.key}
-              className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-all duration-300 ${
-                state === "active"
-                  ? "bg-red-900/30 border border-red-800"
-                  : state === "done"
-                    ? "bg-zinc-800/50"
-                    : "opacity-40"
-              }`}
+              className={`flex items-center gap-3 border-b border-line px-5 py-3.5 sm:border-r sm:[&:nth-child(3n)]:border-r-0
+                ${state === "active" ? "bg-blood/10" : ""}`}
             >
-              <div
-                className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                  state === "active"
-                    ? "bg-red-600 text-white animate-pulse"
-                    : state === "done"
-                      ? "bg-green-600 text-white"
-                      : "bg-zinc-700 text-zinc-500"
-                }`}
-              >
-                {state === "done" ? "\u2713" : step.icon}
-              </div>
               <span
-                className={`text-[9px] text-center leading-tight ${
-                  state === "active"
-                    ? "text-red-400 font-medium"
-                    : state === "done"
-                      ? "text-zinc-400"
-                      : "text-zinc-600"
-                }`}
+                className={`octagon flex h-7 w-7 shrink-0 items-center justify-center font-mono text-[0.6875rem] font-bold
+                  ${state === "done" ? "bg-go text-canvas" : state === "active" ? "animate-pulse bg-blood text-white" : "bg-panel-2 text-dim"}`}
+              >
+                {state === "done" ? <CheckIcon /> : idx + 1}
+              </span>
+              <span
+                className={`text-sm ${state === "pending" ? "text-dim" : state === "active" ? "font-medium text-chalk" : "text-mute"}`}
               >
                 {step.label}
               </span>
-            </div>
+            </li>
           );
         })}
-      </div>
+      </ol>
 
-      {/* Animated scanner line effect */}
-      <div className="relative h-1 bg-zinc-800 rounded-full overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-red-500 to-transparent animate-scan" />
-      </div>
-
-      <p className="text-[10px] text-zinc-600 text-center">
-        YOLOv8-Pose skeleton tracking + biomechanical analysis + Claude AI
-        coaching
+      <p className="px-6 py-4 text-xs text-dim">
+        You can leave this page. The breakdown keeps running and will be in your camp when
+        it&apos;s done.
       </p>
-
-      <style jsx>{`
-        @keyframes scan {
-          0% {
-            transform: translateX(-100%);
-          }
-          100% {
-            transform: translateX(200%);
-          }
-        }
-        .animate-scan {
-          animation: scan 2s ease-in-out infinite;
-          width: 40%;
-        }
-      `}</style>
-    </Card>
+    </div>
   );
 }

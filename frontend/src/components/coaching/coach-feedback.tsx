@@ -1,7 +1,7 @@
 "use client";
 
 import type { CoachingFeedback } from "@/lib/types";
-import { Card, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 
 interface Props {
   rawFeedback: string | null;
@@ -18,72 +18,81 @@ function parseFeedback(raw: string | null): CoachingFeedback | null {
   }
 }
 
+function Heading() {
+  return (
+    <div className="mb-4 flex items-center justify-between">
+      <h2 className="display text-3xl text-chalk">Corner talk</h2>
+      <span className="eyebrow text-gold">Between rounds</span>
+    </div>
+  );
+}
+
 export function CoachFeedbackPanel({ rawFeedback }: Props) {
   const feedback = parseFeedback(rawFeedback);
 
   if (!rawFeedback) {
     return (
-      <Card>
-        <CardTitle>Coach&apos;s Corner</CardTitle>
-        <p className="text-sm text-zinc-500">No coaching feedback available yet.</p>
+      <Card accent="gold">
+        <Heading />
+        <p className="text-sm text-mute">No coaching notes for this round yet.</p>
       </Card>
     );
   }
 
   if (!feedback) {
     return (
-      <Card>
-        <CardTitle>Coach&apos;s Corner</CardTitle>
-        <p className="text-sm text-zinc-300">{rawFeedback}</p>
+      <Card accent="gold">
+        <Heading />
+        <p className="text-sm leading-relaxed text-chalk">{rawFeedback}</p>
       </Card>
     );
   }
 
   return (
-    <Card>
-      <CardTitle>Coach&apos;s Corner</CardTitle>
+    <Card accent="gold">
+      <Heading />
       {feedback._note && (
-        <p className="mb-3 rounded border border-amber-700/50 bg-amber-950/30 px-3 py-2 text-xs text-amber-300">
+        <p className="mb-4 rounded-sm border border-gold/40 bg-gold/10 px-3 py-2 text-xs text-gold">
           {feedback._note}
         </p>
       )}
 
-      <div className="space-y-4 mt-3">
-        <div>
-          <p className="text-sm text-zinc-300 leading-relaxed">{feedback.summary}</p>
+      <div className="space-y-5">
+        <div className="border border-blood/50 bg-blood/10 p-4">
+          <p className="eyebrow text-blood">Fix this first</p>
+          <p className="mt-2 font-display text-2xl font-bold uppercase italic leading-tight text-chalk">
+            {feedback.one_thing}
+          </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div className="rounded-lg bg-zinc-800/50 p-3">
-            <p className="text-xs text-zinc-500 uppercase tracking-wider">Key Metric</p>
-            <p className="text-sm text-white font-medium mt-1">{feedback.key_metric}</p>
-          </div>
-          <div className="rounded-lg bg-red-900/20 border border-red-900/30 p-3">
-            <p className="text-xs text-red-400 uppercase tracking-wider">Fix This First</p>
-            <p className="text-sm text-white font-medium mt-1">{feedback.one_thing}</p>
-          </div>
-        </div>
+        <p className="leading-relaxed text-chalk/90">{feedback.summary}</p>
 
-        {feedback.prescribed_drill && (
-          <div className="rounded-lg bg-zinc-800/50 p-3">
-            <p className="text-xs text-zinc-500 uppercase tracking-wider">Prescribed Drill</p>
-            <p className="text-sm text-white font-medium mt-1">
-              {feedback.prescribed_drill.reasoning}
-            </p>
+        <div className="grid gap-px overflow-hidden rounded-sm border border-line bg-line sm:grid-cols-2">
+          <div className="bg-panel-2 p-4">
+            <p className="eyebrow">Number to watch</p>
+            <p className="mt-1.5 text-sm font-medium text-chalk">{feedback.key_metric}</p>
           </div>
-        )}
+          {feedback.prescribed_drill && (
+            <div className="bg-panel-2 p-4">
+              <p className="eyebrow">Why this drill</p>
+              <p className="mt-1.5 text-sm font-medium text-chalk">
+                {feedback.prescribed_drill.reasoning}
+              </p>
+            </div>
+          )}
+        </div>
 
         {feedback.detailed_notes && feedback.detailed_notes.length > 0 && (
           <div>
-            <p className="text-xs text-zinc-500 uppercase tracking-wider mb-2">Detailed Notes</p>
-            <ul className="space-y-1">
+            <p className="eyebrow mb-2">Notes</p>
+            <ol className="space-y-2">
               {feedback.detailed_notes.map((note, i) => (
-                <li key={i} className="text-sm text-zinc-400 flex gap-2">
-                  <span className="text-zinc-600 flex-shrink-0">-</span>
+                <li key={i} className="flex gap-3 text-sm leading-relaxed text-mute">
+                  <span className="font-mono text-xs text-blood">{String(i + 1).padStart(2, "0")}</span>
                   {note}
                 </li>
               ))}
-            </ul>
+            </ol>
           </div>
         )}
       </div>

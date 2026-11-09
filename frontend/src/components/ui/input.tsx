@@ -7,26 +7,26 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   error?: string;
 }
 
+export const fieldClasses =
+  "h-11 w-full rounded-sm border bg-canvas/70 px-3 text-chalk placeholder:text-dim transition-colors focus:border-blood focus:outline-none focus:ring-1 focus:ring-blood";
+
 export const Input = forwardRef<HTMLInputElement, InputProps>(
   ({ label, error, className = "", id, ...props }, ref) => {
     const inputId = id || label?.toLowerCase().replace(/\s+/g, "-");
     return (
-      <div className="space-y-1">
+      <div className="space-y-1.5">
         {label && (
-          <label htmlFor={inputId} className="block text-sm font-medium text-zinc-300">
+          <label htmlFor={inputId} className="eyebrow block">
             {label}
           </label>
         )}
         <input
           ref={ref}
           id={inputId}
-          className={`w-full rounded-lg border bg-zinc-800 px-3 py-2 text-white placeholder-zinc-500
-            focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent
-            ${error ? "border-red-500" : "border-zinc-700"}
-            ${className}`}
+          className={`${fieldClasses} ${error ? "border-blood" : "border-line-2"} ${className}`}
           {...props}
         />
-        {error && <p className="text-sm text-red-400">{error}</p>}
+        {error && <p className="text-sm text-[#ff6b75]">{error}</p>}
       </div>
     );
   },

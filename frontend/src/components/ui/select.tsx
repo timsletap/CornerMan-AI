@@ -1,6 +1,7 @@
 "use client";
 
 import { type SelectHTMLAttributes, forwardRef } from "react";
+import { fieldClasses } from "./input";
 
 interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
   label?: string;
@@ -13,31 +14,26 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
   ({ label, error, options, placeholder, className = "", id, ...props }, ref) => {
     const selectId = id || label?.toLowerCase().replace(/\s+/g, "-");
     return (
-      <div className="space-y-1">
+      <div className="space-y-1.5">
         {label && (
-          <label htmlFor={selectId} className="block text-sm font-medium text-zinc-300">
+          <label htmlFor={selectId} className="eyebrow block">
             {label}
           </label>
         )}
         <select
           ref={ref}
           id={selectId}
-          className={`w-full rounded-lg border bg-zinc-800 px-3 py-2 text-white
-            focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent
-            ${error ? "border-red-500" : "border-zinc-700"}
-            ${className}`}
+          className={`${fieldClasses} ${error ? "border-blood" : "border-line-2"} ${className}`}
           {...props}
         >
-          {placeholder && (
-            <option value="" className="text-zinc-500">{placeholder}</option>
-          )}
+          {placeholder && <option value="">{placeholder}</option>}
           {options.map((opt) => (
             <option key={opt.value} value={opt.value}>
               {opt.label}
             </option>
           ))}
         </select>
-        {error && <p className="text-sm text-red-400">{error}</p>}
+        {error && <p className="text-sm text-[#ff6b75]">{error}</p>}
       </div>
     );
   },

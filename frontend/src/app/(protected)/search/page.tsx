@@ -3,10 +3,13 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
+import { formatClock } from "@/lib/format";
+import { MAX_DURATION_SECONDS } from "@/lib/upload-rules";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Spinner } from "@/components/ui/spinner";
+import { SectionHeading } from "@/components/ui/card";
+import { SearchIcon } from "@/components/ui/icons";
+import { ErrorNote, LoadingBlock } from "@/components/ui/spinner";
 
 interface SearchResult {
   url: string;
@@ -16,22 +19,28 @@ interface SearchResult {
   channel: string;
 }
 
+const SUGGESTIONS = [
+  "heavy bag boxing combinations",
+  "muay thai pad work",
+  "shadow boxing drills",
+  "UFC fight highlights",
+];
+
 export default function SearchPage() {
   const router = useRouter();
-  const [query, setQuery] = useState("UFC fight highlights");
-  const [results, setResults] = useState<SearchResult[]>([]);
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<SearchResult[] | null>(null);
   const [searching, setSearching] = useState(false);
   const [downloading, setDownloading] = useState<string | null>(null);
   const [error, setError] = useState("");
 
-  async function handleSearch(e: FormEvent) {
-    e.preventDefault();
-    if (!query.trim()) return;
+  async function search(text: string) {
+    if (!text.trim()) return;
+    setQuery(text);
     setSearching(true);
     setError("");
     try {
-      const res = await api.searchYouTube(query);
-      setResults(res);
+      setResults(await api.searchYouTube(text));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Search failed");
     } finally {
@@ -39,90 +48,112 @@ export default function SearchPage() {
     }
   }
 
-  async function handleDownload(url: string) {
+  function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    search(query);
+  }
+
+  async function handleImport(url: string) {
     setDownloading(url);
     setError("");
     try {
       const video = await api.downloadYouTube(url);
       router.push(`/videos/${video.id}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Download failed");
+      setError(err instanceof Error ? err.message : "Import failed");
       setDownloading(null);
     }
   }
 
-  function formatDuration(secs: number | null) {
-    if (!secs) return "--";
-    const m = Math.floor(secs / 60);
-    const s = secs % 60;
-    return `${m}:${s.toString().padStart(2, "0")}`;
-  }
+  const limitMinutes = MAX_DURATION_SECONDS / 60;
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
+    <div className="mx-auto max-w-4xl space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-white">Find Fight Clips</h1>
-        <p className="text-sm text-zinc-400 mt-1">
-          Search YouTube for UFC fight clips to analyze. Clips must be under 60 seconds.
+        <SectionHeading eyebrow="Scout" title="Find clips to break down" />
+        <p className="mt-3 max-w-2xl text-mute">
+          Search YouTube and import a clip into your library. Clips can be up to{" "}
+          {limitMinutes} minutes. One fighter filmed from the side reads best.
         </p>
       </div>
 
-      <form onSubmit={handleSearch} className="flex gap-3">
-        <Input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search for fight clips..."
-          className="flex-1"
-        />
-        <Button type="submit" disabled={searching}>
-          {searching ? "Searching..." : "Search"}
+      <form onSubmit={handleSubmit} className="flex gap-3">
+        <div className="flex-1">
+          <Input
+            aria-label="Search YouTube"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search for training or fight footage"
+          />
+        </div>
+        <Button type="submit" disabled={searching || !query.trim()} className="h-11">
+          <SearchIcon /> {searching ? "Searching" : "Search"}
         </Button>
       </form>
 
-      {error && (
-        <div className="rounded-lg bg-red-900/30 border border-red-800 p-3 text-sm text-red-400">
-          {error}
-        </div>
-      )}
-
-      {searching && (
-        <div className="flex justify-center py-8">
-          <Spinner />
-        </div>
-      )}
-
-      <div className="space-y-3">
-        {results.map((r) => {
-          const tooLong = r.duration !== null && r.duration > 60;
-          return (
-            <Card key={r.url} className="flex items-start gap-4">
-              {r.thumbnail && (
-                <img
-                  src={r.thumbnail}
-                  alt={r.title}
-                  className="w-32 h-20 object-cover rounded-lg flex-shrink-0"
-                />
-              )}
-              <div className="flex-1 min-w-0">
-                <h3 className="text-sm font-medium text-white truncate">{r.title}</h3>
-                <p className="text-xs text-zinc-500 mt-0.5">{r.channel}</p>
-                <p className="text-xs text-zinc-400 mt-1">
-                  Duration: {formatDuration(r.duration)}
-                  {tooLong && <span className="text-red-400 ml-2">(exceeds 60s limit)</span>}
-                </p>
-              </div>
-              <Button
-                size="sm"
-                variant={tooLong ? "ghost" : "primary"}
-                disabled={downloading === r.url || tooLong}
-                onClick={() => handleDownload(r.url)}
-              >
-                {downloading === r.url ? "Downloading..." : "Import"}
-              </Button>
-            </Card>
-          );
-        })}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="eyebrow">Try</span>
+        {SUGGESTIONS.map((s) => (
+          <button
+            key={s}
+            onClick={() => search(s)}
+            className="cursor-pointer rounded-sm border border-line-2 px-3 py-1 text-sm text-mute transition-colors hover:border-chalk/60 hover:text-chalk"
+          >
+            {s}
+          </button>
+        ))}
       </div>
+
+      {error && <ErrorNote>{error}</ErrorNote>}
+      {searching && <LoadingBlock />}
+
+      {!searching && results !== null && results.length === 0 && (
+        <p className="text-mute">Nothing came back for that search. Try different words.</p>
+      )}
+
+      {!searching && results && results.length > 0 && (
+        <ul className="space-y-3">
+          {results.map((r) => {
+            const tooLong = r.duration !== null && r.duration > MAX_DURATION_SECONDS;
+            const importing = downloading === r.url;
+            return (
+              <li
+                key={r.url}
+                className="flex flex-wrap items-center gap-4 rounded-md border border-line bg-panel/85 p-4 sm:flex-nowrap"
+              >
+                {r.thumbnail && (
+                  // YouTube thumbnails come from many hosts; a plain img avoids listing them all
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={r.thumbnail}
+                    alt=""
+                    className="h-20 w-36 shrink-0 rounded-sm object-cover"
+                  />
+                )}
+                <div className="min-w-0 flex-1 basis-48">
+                  <h3 className="line-clamp-2 font-medium text-chalk">{r.title}</h3>
+                  <p className="mt-1 font-mono text-xs text-dim">
+                    {r.channel} · {r.duration === null ? "length unknown" : formatClock(r.duration * 1000)}
+                  </p>
+                  {tooLong && (
+                    <p className="mt-1 text-xs text-gold">
+                      Over the {limitMinutes} minute limit
+                    </p>
+                  )}
+                </div>
+                <Button
+                  size="sm"
+                  variant={tooLong ? "ghost" : "primary"}
+                  disabled={downloading !== null || tooLong}
+                  onClick={() => handleImport(r.url)}
+                >
+                  {importing ? "Importing..." : "Import"}
+                </Button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </div>
   );
 }

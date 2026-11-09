@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Barlow_Condensed, Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 
@@ -13,9 +13,17 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const barlow = Barlow_Condensed({
+  variable: "--font-barlow",
+  subsets: ["latin"],
+  weight: ["600", "700", "800", "900"],
+  style: ["normal", "italic"],
+});
+
 export const metadata: Metadata = {
-  title: "CornerMan AI - Fight Smarter",
-  description: "AI-powered combat sports coaching platform",
+  title: "CornerMan AI: your striking, broken down",
+  description:
+    "Upload your bag work, pad rounds, or sparring. CornerMan tracks every punch, flags dropped guards and telegraphs, and gives you corner advice and drills.",
 };
 
 export default function RootLayout({
@@ -26,7 +34,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-zinc-950 text-zinc-100 min-h-screen`}
+        className={`${geistSans.variable} ${geistMono.variable} ${barlow.variable} antialiased min-h-screen`}
       >
         <Providers>{children}</Providers>
       </body>

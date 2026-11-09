@@ -47,6 +47,19 @@ async function request<T>(
   return res.json();
 }
 
+/** The server's reason for rejecting an upload, or a readable fallback for the status. */
+export function uploadErrorMessage(status: number, responseText: string): string {
+  try {
+    const detail: unknown = JSON.parse(responseText).detail;
+    if (typeof detail === "string" && detail) return detail;
+  } catch {
+    // not JSON (e.g. a proxy error page); fall through to the status
+  }
+  if (status === 413) return "That clip is over the upload size limit.";
+  if (status === 401) return "Your session expired. Sign in again to upload.";
+  return `Upload failed (${status}).`;
+}
+
 // Auth
 export const api = {
   login: (email: string, password: string) =>
@@ -81,6 +94,7 @@ export const api = {
   uploadVideo: (
     file: File,
     onProgress?: (pct: number) => void,
+    signal?: AbortSignal,
   ): Promise<import("./types").VideoUploadResponse> => {
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
@@ -98,10 +112,13 @@ export const api = {
         if (xhr.status === 201) {
           resolve(JSON.parse(xhr.responseText));
         } else {
-          reject(new ApiError(xhr.status, xhr.statusText));
+          reject(new ApiError(xhr.status, uploadErrorMessage(xhr.status, xhr.responseText)));
         }
       };
-      xhr.onerror = () => reject(new Error("Upload failed"));
+      xhr.onerror = () =>
+        reject(new Error("Upload failed. Check your connection and try again."));
+      xhr.onabort = () => reject(new DOMException("Upload cancelled", "AbortError"));
+      signal?.addEventListener("abort", () => xhr.abort(), { once: true });
 
       const fd = new FormData();
       fd.append("file", file);

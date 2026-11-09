@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/auth-context";
 import { Navbar } from "@/components/layout/navbar";
-import { Spinner } from "@/components/ui/spinner";
+import { LoadingBlock } from "@/components/ui/spinner";
 
 export default function ProtectedLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -14,20 +14,12 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
     if (!loading && !user) router.replace("/login");
   }, [user, loading, router]);
 
-  if (loading || !user) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Spinner size="lg" />
-      </div>
-    );
-  }
+  if (loading || !user) return <LoadingBlock fullScreen />;
 
   return (
-    <div className="min-h-screen pb-16 md:pb-0">
+    <div className="min-h-screen pb-20 md:pb-0">
       <Navbar />
-      <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
-        {children}
-      </main>
+      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">{children}</main>
     </div>
   );
 }

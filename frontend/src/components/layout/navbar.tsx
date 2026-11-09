@@ -1,78 +1,93 @@
 "use client";
 
 import Link from "next/link";
-import { useAuth } from "@/context/auth-context";
 import { usePathname } from "next/navigation";
+import { useAuth } from "@/context/auth-context";
+import { Logo } from "@/components/brand/logo";
+import { ButtonLink } from "@/components/ui/button";
+import { GridIcon, LogoutIcon, SearchIcon, UploadIcon, UserIcon } from "@/components/ui/icons";
+
+const NAV_LINKS = [
+  { href: "/dashboard", label: "Camp", icon: GridIcon },
+  { href: "/upload", label: "Upload", icon: UploadIcon },
+  { href: "/search", label: "Find clips", icon: SearchIcon },
+  { href: "/profile", label: "Profile", icon: UserIcon },
+];
 
 export function Navbar() {
   const { user, logout } = useAuth();
   const pathname = usePathname();
-
-  const navLinks = [
-    { href: "/dashboard", label: "Dashboard" },
-    { href: "/upload", label: "Upload" },
-    { href: "/search", label: "Find Clips" },
-    { href: "/profile", label: "Profile" },
-  ];
+  const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
 
   return (
-    <nav className="sticky top-0 z-50 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur-sm">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex h-16 items-center justify-between">
-          <div className="flex items-center gap-8">
-            <Link href="/dashboard" className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-lg bg-red-600 flex items-center justify-center font-bold text-white text-sm">
-                CM
-              </div>
-              <span className="text-lg font-bold text-white hidden sm:block">CornerMan AI</span>
+    <>
+      <nav className="sticky top-0 z-50 border-b border-line bg-canvas/85 backdrop-blur-md">
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center gap-10">
+            <Link href="/dashboard" aria-label="CornerMan home">
+              <Logo />
             </Link>
-            <div className="hidden md:flex items-center gap-1">
-              {navLinks.map((link) => (
+            <div className="hidden items-center gap-7 md:flex">
+              {NAV_LINKS.map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors
-                    ${pathname === link.href
-                      ? "bg-zinc-800 text-white"
-                      : "text-zinc-400 hover:text-white hover:bg-zinc-800/50"
-                    }`}
+                  aria-current={isActive(link.href) ? "page" : undefined}
+                  className={`relative py-5 font-display text-[0.9375rem] font-bold uppercase tracking-wider transition-colors
+                    ${isActive(link.href) ? "text-chalk" : "text-mute hover:text-chalk"}`}
                 >
                   {link.label}
+                  {isActive(link.href) && (
+                    <span className="absolute inset-x-0 -bottom-px h-0.5 bg-blood" />
+                  )}
                 </Link>
               ))}
             </div>
           </div>
+
           <div className="flex items-center gap-4">
+            <ButtonLink href="/upload" size="sm" className="hidden sm:inline-flex">
+              <UploadIcon /> Upload film
+            </ButtonLink>
             {user && (
-              <span className="text-sm text-zinc-400 hidden sm:block">
+              <Link
+                href="/profile"
+                className="hidden items-center gap-2 text-sm text-mute hover:text-chalk lg:flex"
+              >
+                <span className="octagon flex h-7 w-7 items-center justify-center bg-panel-2 font-display text-sm font-bold text-chalk">
+                  {user.full_name[0]?.toUpperCase()}
+                </span>
                 {user.full_name}
-              </span>
+              </Link>
             )}
             <button
               onClick={logout}
-              className="text-sm text-zinc-400 hover:text-white transition-colors"
+              className="flex cursor-pointer items-center gap-1.5 text-sm text-mute transition-colors hover:text-chalk"
             >
-              Logout
+              <LogoutIcon className="text-base" />
+              <span className="hidden sm:inline">Log out</span>
             </button>
           </div>
         </div>
-      </div>
+      </nav>
 
       {/* Mobile bottom nav */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-zinc-800 bg-zinc-950 md:hidden">
-        <div className="flex justify-around py-2">
-          {navLinks.map((link) => (
+      <div className="fixed inset-x-0 bottom-0 z-50 border-t border-line bg-canvas/95 backdrop-blur-md md:hidden">
+        <div className="grid grid-cols-4">
+          {NAV_LINKS.map(({ href, label, icon: NavIcon }) => (
             <Link
-              key={link.href}
-              href={link.href}
-              className={`flex flex-col items-center px-3 py-1 text-xs font-medium transition-colors
-                ${pathname === link.href ? "text-red-500" : "text-zinc-400"}`}
+              key={href}
+              href={href}
+              aria-current={isActive(href) ? "page" : undefined}
+              className={`flex flex-col items-center gap-1 py-2.5 font-mono text-[0.625rem] uppercase tracking-wider
+                ${isActive(href) ? "text-blood" : "text-mute"}`}
             >
-              {link.label}
+              <NavIcon className="text-xl" />
+              {label}
             </Link>
           ))}
         </div>
       </div>
-    </nav>
+    </>
   );
 }
