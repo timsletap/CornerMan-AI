@@ -47,6 +47,11 @@ class Settings(BaseSettings):
     OCCLUSION_PAUSE_SECONDS: float = 0.5
     YOLO_MODEL_NAME: str = "yolov8m-pose.pt"
     VISION_FRAME_SKIP: int = 1
+    # Keypoint smoothing, One Euro filter (VIS-10). Positions are filtered in frame
+    # heights, so BETA is per (frame height / s). Not yet tuned on labeled dev clips.
+    ONE_EURO_MIN_CUTOFF: float = 1.0  # Hz; lower = smoother when still
+    ONE_EURO_BETA: float = 5.0  # higher = less lag when moving fast
+    ONE_EURO_D_CUTOFF: float = 1.0  # Hz; smoothing of the speed estimate
     # Identity tracking (VIS-09)
     TRACKER_CONFIG: str = "bytetrack.yaml"
     TARGET_SELECT_SECONDS: float = 2.0  # window at the start used to pick the fighter

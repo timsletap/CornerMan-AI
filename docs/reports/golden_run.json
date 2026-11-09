@@ -1,5 +1,5 @@
 {
-  "git_sha": "f4a6f8b",
+  "git_sha": "dae775c",
   "clip": {
     "path": "tests/golden/clip.mp4",
     "duration_s": 4.98,
@@ -18,19 +18,16 @@
   },
   "hardware": "Intel64 Family 6 Model 198 Stepping 2, GenuineIntel, 24 logical cores, CPU only, torch 2.14.1+cpu",
   "throughput": {
-    "stage1_seconds": 26.92,
-    "stage1_fps": 5.6,
-    "stage1_x_realtime": 0.18,
-    "stages23_ms": 7.5,
-    "stages23_x_realtime": 663,
+    "stage1_seconds": 19.22,
+    "stage1_fps": 7.9,
+    "stage1_x_realtime": 0.26,
+    "stages23_ms": 10.0,
+    "stages23_x_realtime": 499,
     "stages23_repeats": 25
   },
   "detections": {
-    "strikes": 2,
-    "by_type": {
-      "body_shot": 1,
-      "hook": 1
-    },
+    "strikes": 0,
+    "by_type": {},
     "errors": {},
     "guard_score": 100.0
   },
@@ -52,28 +49,13 @@
       },
       "frames_analyzed": 152,
       "occluded_ranges": [],
-      "strike_events": [
-        {
-          "frame_number": 61,
-          "timestamp_ms": 1996,
-          "hand": "right",
-          "strike_type": "hook",
-          "velocity": 1.04
-        },
-        {
-          "frame_number": 67,
-          "timestamp_ms": 2193,
-          "hand": "left",
-          "strike_type": "body_shot",
-          "velocity": 1.58
-        }
-      ],
+      "strike_events": [],
       "error_flags": [],
       "metrics": {
-        "total_strikes": 2,
-        "avg_velocity": 1.31,
+        "total_strikes": 0,
+        "avg_velocity": 0.0,
         "guard_score": 100.0,
-        "strikes_per_minute": 2.0,
+        "strikes_per_minute": 0.0,
         "error_counts": {
           "dropped_guard": 0,
           "chicken_wing": 0
@@ -81,7 +63,7 @@
       }
     },
     "coaching": {
-      "summary": "Detected 2 strikes with an average velocity of 1.3 u/s. Guard score: 100%.",
+      "summary": "Detected 0 strikes with an average velocity of 0.0 u/s. Guard score: 100%.",
       "key_metric": "Guard Score: 100%",
       "one_thing": "Focus on keeping your guard hand tight to your chin when throwing combinations.",
       "prescribed_drill": {
@@ -89,8 +71,8 @@
         "reasoning": "Guard maintenance is fundamental."
       },
       "detailed_notes": [
-        "Total strikes detected: 2",
-        "Strikes per minute: 2.0",
+        "Total strikes detected: 0",
+        "Strikes per minute: 0.0",
         "Errors found: 0"
       ],
       "mapped_drills": [],
