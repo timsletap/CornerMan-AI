@@ -101,6 +101,12 @@ class VisionConfig:
     strike_velocity_threshold: float
     guard_distance_threshold: float
     telegraph_variance_threshold: float
+    tracker_config: str = "bytetrack.yaml"
+    target_select_s: float = 2.0
+    """Seconds at the start of the clip used to choose the target track."""
+    reacquire_iou: float = 0.3
+    reacquire_s: float = 1.0
+    """Seconds after losing the target during which a new id is matched by bbox IoU."""
 
     @property
     def skip(self) -> int:
@@ -116,6 +122,10 @@ class VisionConfig:
             strike_velocity_threshold=settings.STRIKE_VELOCITY_THRESHOLD,
             guard_distance_threshold=settings.GUARD_DISTANCE_THRESHOLD,
             telegraph_variance_threshold=settings.TELEGRAPH_VARIANCE_THRESHOLD,
+            tracker_config=settings.TRACKER_CONFIG,
+            target_select_s=settings.TARGET_SELECT_SECONDS,
+            reacquire_iou=settings.REACQUIRE_IOU,
+            reacquire_s=settings.REACQUIRE_SECONDS,
         )
 
 

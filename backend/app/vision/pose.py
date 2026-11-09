@@ -22,7 +22,7 @@ POSES_SCHEMA = pa.schema(
     [
         ("frame_number", pa.int64()),
         ("timestamp_ms", pa.int64()),
-        ("track_id", pa.int64()),  # null until VIS-09
+        ("track_id", pa.int64()),  # tracker id; null when the tracker gave none
         ("kp_x", pa.list_(pa.float64(), NUM_KEYPOINTS)),
         ("kp_y", pa.list_(pa.float64(), NUM_KEYPOINTS)),
         ("kp_conf", pa.list_(pa.float64(), NUM_KEYPOINTS)),
@@ -32,7 +32,7 @@ POSES_SCHEMA = pa.schema(
 )
 
 # Stored in the parquet metadata; a cache is reused only when these match.
-CACHE_KEYS = ("model_name", "frame_skip", "fps", "total_frames", "width", "height")
+CACHE_KEYS = ("model_name", "frame_skip", "tracker", "fps", "total_frames", "width", "height")
 
 ProgressFn = Callable[[int, int], None]
 """Called as (frame_number, total_frames) every 10th analyzed frame."""
@@ -57,7 +57,10 @@ def read_video_meta(cap: cv2.VideoCapture) -> VideoMeta:
 def extract_poses(
     video_path: str, cfg: VisionConfig, on_progress: ProgressFn | None = None
 ) -> Poses:
-    """Run the pose model on every ``cfg.skip``-th frame and keep all detected people."""
+    """Run the pose model and tracker on every ``cfg.skip``-th frame; keep all people.
+
+    Each detection carries the tracker's id (``cfg.tracker_config``, ByteTrack by default).
+    """
     from ultralytics import YOLO  # heavy import; only stage 1 needs it
 
     model = YOLO(cfg.model_name)
@@ -81,7 +84,7 @@ def extract_poses(
                 on_progress(frame_num, meta.total_frames)
 
             timestamp_ms = int((frame_num / meta.fps) * 1000)
-            results = model(frame, verbose=False)
+            results = model.track(frame, persist=True, tracker=cfg.tracker_config, verbose=False)
 
             if results[0].keypoints is None or len(results[0].keypoints.data) == 0:
                 frame_num += 1
@@ -90,13 +93,15 @@ def extract_poses(
             keypoints_data = results[0].keypoints.data.cpu().numpy()
             boxes = results[0].boxes.xyxy.cpu().numpy()
             box_conf = results[0].boxes.conf.cpu().numpy()
+            ids = results[0].boxes.id
+            track_ids = ids.cpu().numpy() if ids is not None else None
             for i in range(len(boxes)):
                 kps = keypoints_data[i]
                 rows.append(
                     {
                         "frame_number": frame_num,
                         "timestamp_ms": timestamp_ms,
-                        "track_id": None,
+                        "track_id": int(track_ids[i]) if track_ids is not None else None,
                         "kp_x": [float(v) for v in kps[:, 0]],
                         "kp_y": [float(v) for v in kps[:, 1]],
                         "kp_conf": [float(v) for v in kps[:, 2]],
@@ -116,6 +121,7 @@ def _cache_metadata(meta: VideoMeta, cfg: VisionConfig) -> dict[str, str]:
     values = {
         "model_name": Path(cfg.model_name).name,
         "frame_skip": cfg.skip,
+        "tracker": cfg.tracker_config,
         "fps": meta.fps,
         "total_frames": meta.total_frames,
         "width": meta.width,

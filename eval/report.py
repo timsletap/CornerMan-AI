@@ -42,6 +42,13 @@ class StrikeType(_Model):
 
 
 class IdentitySwitches(_Model):
+    """Suspected jumps of the analyzed track to another person.
+
+    Counted automatically as target boxes that barely overlap between consecutive
+    frames; the pipeline never takes over a track that shared a frame with the
+    target. Overlay review remains the ground truth.
+    """
+
     total: int = Field(ge=0)
     per_clip: dict[str, int]
 

@@ -9,7 +9,7 @@ functions over the cached poses.
 from __future__ import annotations
 
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -36,22 +36,40 @@ class Analysis:
     occluded_ranges: list[tuple[int, int]]
     strikes: list[StrikeDetection]
     errors: list[ErrorDetection]
+    target_track_id: int | None = None
+    identity_switches: int = 0
+    tracks: list[tracking.TrackSummary] = field(default_factory=list)
 
     @property
     def guard_score(self) -> float:
         return error_stage.guard_score(self.strikes, self.errors)
 
 
-def analyze_poses(poses: pose.Poses, cfg: VisionConfig) -> Analysis:
-    """Stages 2 and 3 on cached poses. No model, I/O, or progress reporting."""
+def analyze_poses(
+    poses: pose.Poses, cfg: VisionConfig, target_track_id: int | None = None
+) -> Analysis:
+    """Stages 2 and 3 on cached poses. No model, I/O, or progress reporting.
+
+    ``target_track_id`` overrides the automatic choice of fighter (VIS-09).
+    """
     meta = poses.meta
-    frames = tracking.primary_track(poses.frames, meta, cfg)
+    target = tracking.follow_target(poses.frames, meta, cfg, target_track_id)
+    frames = target.frames
     ranges, active = occluded_ranges(frames, meta, cfg)
     found = strikes.detect_strikes(frames, active, meta, cfg)
     errs = error_stage.analyze_guard(found, frames, cfg) + error_stage.detect_telegraph(
         found, frames, cfg
     )
-    return Analysis(meta, frames, ranges, found, errs)
+    return Analysis(
+        meta,
+        frames,
+        ranges,
+        found,
+        errs,
+        target_track_id=target.target_track_id,
+        identity_switches=target.identity_switches,
+        tracks=target.tracks,
+    )
 
 
 def load_or_extract_poses(video_path: str, cfg: VisionConfig, session: str) -> pose.Poses:
@@ -96,6 +114,17 @@ def build_output_json(
         },
         "frames_analyzed": len(analysis.frames),
         "primary_actor_detected": len(analysis.frames) > 0,
+        "target_track_id": analysis.target_track_id,
+        "tracks": [
+            {
+                "track_id": t.track_id,
+                "first_frame": t.first_frame,
+                "frames": t.frames,
+                "bbox": [round(v, 1) for v in t.bbox],
+                "score": t.score,
+            }
+            for t in analysis.tracks
+        ],
         "occluded_ranges": [
             {
                 "start_frame": s,
@@ -146,15 +175,21 @@ def build_output_json(
     }
 
 
-def run_vision_analysis(video_path: str, session_id: uuid.UUID) -> dict[str, Any]:
-    """Run the full vision pipeline on a video file. Called from Celery (sync)."""
+def run_vision_analysis(
+    video_path: str, session_id: uuid.UUID, target_track_id: int | None = None
+) -> dict[str, Any]:
+    """Run the full vision pipeline on a video file. Called from Celery (sync).
+
+    ``target_track_id`` picks the fighter to analyze by tracker id (from a previous
+    run's ``tracks``); by default the largest, most central person is chosen.
+    """
     cfg = VisionConfig.from_settings()
     sid = str(session_id)
 
     poses = load_or_extract_poses(video_path, cfg, sid)
 
     update_progress(sid, "strike_detection", 0.65, "Detecting strikes from velocity data...")
-    analysis = analyze_poses(poses, cfg)
+    analysis = analyze_poses(poses, cfg, target_track_id)
     update_progress(sid, "guard_analysis", 0.70, "Analyzing guard integrity...")
     update_progress(sid, "telegraph_detection", 0.75, "Detecting telegraph patterns...")
 

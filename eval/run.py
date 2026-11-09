@@ -36,7 +36,7 @@ from app.vision.types import VisionConfig, poses_cache_path
 from eval import metrics
 from eval.match import DEFAULT_WINDOW_MS
 from eval.metrics import ClipScore, PredError, PredStrike
-from eval.report import Report, Throughput
+from eval.report import IdentitySwitches, Report, Throughput
 from eval.schema import ClipLabels, load_labels, load_splits
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -196,7 +196,10 @@ def build_report(split: str, runs: Sequence[ClipRun], cfg: VisionConfig, window_
         detection=metrics.detection(scores),
         strike_type=metrics.strike_type(scores),
         errors=metrics.errors(scores),
-        identity_switches=None,  # reported from VIS-09 on
+        identity_switches=IdentitySwitches(
+            total=sum(r.analysis.identity_switches for r in runs),
+            per_clip={r.labels.clip_id: r.analysis.identity_switches for r in runs},
+        ),
         throughput=Throughput(
             stage1_x_realtime=_x_realtime(
                 sum(r.video_seconds for r in inferred),
