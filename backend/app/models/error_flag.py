@@ -42,6 +42,9 @@ class ErrorFlag(Base):
     details: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     # The measurement behind the flag, in shoulder widths (VIS-11)
     measured_value_sw: Mapped[float | None] = mapped_column(Float, nullable=True)
+    # Span of footage the flag was measured over, ms from video start (VIS-13, VIS-14)
+    window_start_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    window_end_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
     user_disputed: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 

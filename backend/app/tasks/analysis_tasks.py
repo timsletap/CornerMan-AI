@@ -134,6 +134,7 @@ def run_analysis_pipeline(self, session_id: str, video_id: str) -> dict:
                 strike_type=strike_type,
                 hand=hand,
                 hand_role=HandRole(se["hand_role"]) if se.get("hand_role") else None,
+                onset_ms=se.get("onset_ms"),
                 velocity=se.get("velocity"),
                 keypoints=se.get("keypoints"),
             )
@@ -162,6 +163,8 @@ def run_analysis_pipeline(self, session_id: str, video_id: str) -> dict:
                 severity=severity,
                 details=ef.get("details"),
                 measured_value_sw=ef.get("measured_value_sw"),
+                window_start_ms=ef.get("window_start_ms"),
+                window_end_ms=ef.get("window_end_ms"),
             )
             db.add(error_obj)
 

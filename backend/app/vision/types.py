@@ -76,6 +76,10 @@ class StrikeDetection:
     keypoints_snapshot: dict[str, Any] = field(default_factory=dict)
     index: int = -1
     """Position of the strike frame in the analyzed frame sequence."""
+    onset_index: int = -1
+    """Position of the motion onset (last quiet frame before the punch), VIS-13."""
+    onset_ms: int | None = None
+    """Time of the motion onset, ms from video start."""
 
 
 @dataclass
@@ -88,6 +92,9 @@ class ErrorDetection:
     related_strike_index: int | None = None
     measured_value_sw: float | None = None
     """The measurement behind the flag, in shoulder widths."""
+    window_start_ms: int | None = None
+    window_end_ms: int | None = None
+    """The span of footage the flag was measured over, ms from video start."""
 
 
 @dataclass(frozen=True)
@@ -110,7 +117,12 @@ class VisionConfig:
     """sw/s."""
     guard_distance_threshold: float
     """sw."""
-    telegraph_variance_threshold: float
+    telegraph_offset_threshold: float = 0.2
+    """sw: elbow lateral swing before onset that counts as a chicken wing."""
+    telegraph_window_frames: int = 10
+    """Analyzed frames before the motion onset checked for a telegraph."""
+    onset_fraction: float = 0.2
+    """A punch starts where wrist speed first reaches this fraction of its peak."""
     tracker_config: str = "bytetrack.yaml"
     target_select_s: float = 2.0
     """Seconds at the start of the clip used to choose the target track."""
@@ -137,7 +149,9 @@ class VisionConfig:
             occlusion_pause_s=settings.OCCLUSION_PAUSE_SECONDS,
             strike_velocity_threshold=settings.STRIKE_VELOCITY_THRESHOLD,
             guard_distance_threshold=settings.GUARD_DISTANCE_THRESHOLD,
-            telegraph_variance_threshold=settings.TELEGRAPH_VARIANCE_THRESHOLD,
+            telegraph_offset_threshold=settings.TELEGRAPH_OFFSET_THRESHOLD,
+            telegraph_window_frames=settings.TELEGRAPH_WINDOW_FRAMES,
+            onset_fraction=settings.ONSET_FRACTION,
             tracker_config=settings.TRACKER_CONFIG,
             target_select_s=settings.TARGET_SELECT_SECONDS,
             reacquire_iou=settings.REACQUIRE_IOU,

@@ -46,6 +46,8 @@ class StrikeEvent(Base):
     hand: Mapped[Hand] = mapped_column(Enum(Hand))
     # Lead or rear hand under the stance used for the session (VIS-12)
     hand_role: Mapped[HandRole | None] = mapped_column(Enum(HandRole), nullable=True)
+    # Motion onset of the punch, ms from video start (VIS-13)
+    onset_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
     velocity: Mapped[float | None] = mapped_column(Float, nullable=True)
     keypoints: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

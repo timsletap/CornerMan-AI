@@ -9,6 +9,7 @@ from collections.abc import Sequence
 
 from app.vision.signals import (
     TORSO_PER_SHOULDER_WIDTH,
+    FloatArray,
     Signals,
     keypoint_velocity,
     max_joint_angle,
@@ -77,6 +78,7 @@ def detect_strikes(
                     for k in range(NUM_KEYPOINTS)
                 }
                 px_per_sw = float(sig.scale[i])
+                onset = motion_onset(speed, i, cfg.onset_fraction)
                 strikes.append(
                     StrikeDetection(
                         frame_number=fk.frame_number,
@@ -90,6 +92,8 @@ def detect_strikes(
                         wrist_position=(fk.keypoints[hand_idx][0], fk.keypoints[hand_idx][1]),
                         keypoints_snapshot=snapshot,
                         index=i,
+                        onset_index=onset,
+                        onset_ms=int(sig.timestamps_ms[onset]),
                     )
                 )
                 last_strike_frame = fk.frame_number
@@ -99,6 +103,20 @@ def detect_strikes(
         strike.hand_role = hand_role(strike.hand, stance)
         strike.strike_type = classify_strike(sig, strike.index, strike.hand, strike.hand_role)
     return strikes
+
+
+def motion_onset(speed: FloatArray, peak: int, fraction: float) -> int:
+    """VIS-13: index of the frame where a punch starts.
+
+    Walking back from the velocity peak, the first frame where the wrist speed is below
+    ``fraction`` of the peak speed: the last quiet frame before the punch. ``speed`` is
+    in sw/s, indexed by analyzed frame; returns 0 if the wrist never slows down.
+    """
+    limit = fraction * float(speed[peak])
+    i = peak
+    while i > 0 and speed[i] >= limit:
+        i -= 1
+    return i
 
 
 ELBOW_WINDOW_FRAMES = 3
