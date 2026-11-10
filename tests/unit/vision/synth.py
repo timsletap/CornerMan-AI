@@ -278,7 +278,6 @@ def config(**overrides: object) -> VisionConfig:
         "occlusion_pause_s": 0.5,
         "strike_velocity_threshold": 6.0,
         "guard_distance_threshold": 0.6,
-        "telegraph_variance_threshold": 0.10,
     }
     values.update(overrides)
     return VisionConfig(**values)  # type: ignore[arg-type]

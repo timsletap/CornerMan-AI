@@ -9,20 +9,24 @@ from collections.abc import Sequence
 
 import numpy as np
 
-from app.vision.signals import MIN_KEYPOINT_CONF, Signals
+from app.vision.signals import MIN_KEYPOINT_CONF, FloatArray, Signals
 from app.vision.types import (
     LEFT_ELBOW,
+    LEFT_HIP,
+    LEFT_SHOULDER,
     LEFT_WRIST,
     NOSE,
     RIGHT_ELBOW,
+    RIGHT_HIP,
+    RIGHT_SHOULDER,
     RIGHT_WRIST,
     ErrorDetection,
-    FrameKeypoints,
     StrikeDetection,
     VisionConfig,
 )
 
-TELEGRAPH_WINDOW_FRAMES = 10
+MIN_TELEGRAPH_FRAMES = 5
+"""Fewest confident pre-onset frames needed to judge a telegraph."""
 
 
 def severity_band(value: float, threshold: float, medium: float, high: float) -> str:
@@ -71,50 +75,80 @@ def analyze_guard(
     return errors
 
 
+def lateral_offsets(sig: Signals, shoulder: int, elbow: int, indices: Sequence[int]) -> FloatArray:
+    """Elbow offset from its shoulder, perpendicular to the torso line, in sw.
+
+    The torso line runs from the shoulder midpoint to the hip midpoint; with unsure
+    hips it is taken as vertical. Frames where the elbow or shoulder is unsure are left
+    out. The sign is arbitrary: use the range of the result.
+    """
+    values: list[float] = []
+    for i in indices:
+        if sig.conf[i, elbow] < MIN_KEYPOINT_CONF or sig.conf[i, shoulder] < MIN_KEYPOINT_CONF:
+            continue
+        torso = (sig.rel[i, LEFT_HIP] + sig.rel[i, RIGHT_HIP]) / 2  # shoulder midpoint is (0, 0)
+        length = float(np.linalg.norm(torso))
+        hips_ok = (
+            sig.conf[i, LEFT_HIP] >= MIN_KEYPOINT_CONF
+            and sig.conf[i, RIGHT_HIP] >= MIN_KEYPOINT_CONF
+            and length > 1e-6
+        )
+        ux, uy = (torso[0] / length, torso[1] / length) if hips_ok else (0.0, 1.0)
+        arm = sig.rel[i, elbow] - sig.rel[i, shoulder]
+        values.append(float(arm[0] * uy - arm[1] * ux))
+    return np.array(values, dtype=np.float64)
+
+
 def detect_telegraph(
     strikes: Sequence[StrikeDetection],
-    frames: Sequence[FrameKeypoints],
+    sig: Signals,
     cfg: VisionConfig,
 ) -> list[ErrorDetection]:
-    """VIS-04: elbow x variation (coefficient of variation) in the pre-strike frames."""
+    """VIS-13: the elbow flares out before the punch starts (chicken wing).
+
+    For each strike, look at the ``telegraph_window_frames`` analyzed frames ending at
+    its motion onset, so the punch itself is not counted. The flag is raised when the
+    elbow's lateral offset from its shoulder moves through more than
+    ``telegraph_offset_threshold`` sw (max minus min). Severity: ``low`` above the
+    threshold, ``medium`` above 1.5x, ``high`` above 2.5x.
+    """
     errors: list[ErrorDetection] = []
-    threshold = cfg.telegraph_variance_threshold
+    threshold = cfg.telegraph_offset_threshold
     for strike_idx, strike in enumerate(strikes):
-        elbow_idx = LEFT_ELBOW if strike.hand == "left" else RIGHT_ELBOW
-
-        pre_frames = [fk for fk in frames if fk.frame_number < strike.frame_number][
-            -TELEGRAPH_WINDOW_FRAMES:
-        ]
-        if len(pre_frames) < 5:
+        elbow = LEFT_ELBOW if strike.hand == "left" else RIGHT_ELBOW
+        shoulder = LEFT_SHOULDER if strike.hand == "left" else RIGHT_SHOULDER
+        onset = strike.onset_index
+        if onset < 0:
+            continue
+        first = max(0, onset - cfg.telegraph_window_frames + 1)
+        # Stay within one continuous stretch of footage (no occlusion gap in the window).
+        while first < onset and (
+            sig.frame_numbers[onset] - sig.frame_numbers[first]
+            > cfg.telegraph_window_frames * cfg.skip * 2
+        ):
+            first += 1
+        offsets = lateral_offsets(sig, shoulder, elbow, range(first, onset + 1))
+        if len(offsets) < MIN_TELEGRAPH_FRAMES:
             continue
 
-        elbow_x_coords = [
-            fk.keypoints[elbow_idx][0] for fk in pre_frames if fk.keypoints[elbow_idx][2] >= 0.5
-        ]
-        if len(elbow_x_coords) < 3:
-            continue
-
-        mean_x = sum(elbow_x_coords) / len(elbow_x_coords)
-        if mean_x == 0:
-            continue
-        variance = sum((x - mean_x) ** 2 for x in elbow_x_coords) / len(elbow_x_coords)
-        std_x = variance**0.5
-        cov = std_x / abs(mean_x)
-
-        if cov > threshold:
+        swing = float(offsets.max() - offsets.min())
+        if swing > threshold:
             errors.append(
                 ErrorDetection(
                     frame_number=strike.frame_number,
                     timestamp_ms=strike.timestamp_ms,
                     error_type="chicken_wing",
-                    severity=severity_band(cov, threshold, 1.5, 2.5),
+                    severity=severity_band(swing, threshold, 1.5, 2.5),
                     details={
                         "hand": strike.hand,
-                        "elbow_x_variance": round(cov, 4),
+                        "elbow_swing_sw": round(swing, 3),
                         "threshold": threshold,
-                        "pre_strike_frames_analyzed": len(elbow_x_coords),
+                        "pre_strike_frames_analyzed": len(offsets),
                     },
                     related_strike_index=strike_idx,
+                    measured_value_sw=round(swing, 3),
+                    window_start_ms=int(sig.timestamps_ms[first]),
+                    window_end_ms=int(sig.timestamps_ms[onset]),
                 )
             )
     return errors

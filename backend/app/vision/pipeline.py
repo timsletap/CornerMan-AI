@@ -71,7 +71,7 @@ def analyze_poses(
     stance_used, stance_source = stance.resolve_stance(sig, stance_override, profile_stance)
     found = strikes.detect_strikes(sig, frames, active, meta, cfg, stance_used)
     errs = error_stage.analyze_guard(found, sig, cfg) + error_stage.detect_telegraph(
-        found, frames, cfg
+        found, sig, cfg
     )
     return Analysis(
         meta,
@@ -158,6 +158,7 @@ def build_output_json(
                 "timestamp_ms": s.timestamp_ms,
                 "hand": s.hand,
                 "hand_role": s.hand_role,
+                "onset_ms": s.onset_ms,
                 "strike_type": s.strike_type,
                 "velocity": round(s.velocity, 2),
                 "wrist_position": {
@@ -177,6 +178,8 @@ def build_output_json(
                 "details": e.details,
                 "related_strike_index": e.related_strike_index,
                 "measured_value_sw": e.measured_value_sw,
+                "window_start_ms": e.window_start_ms,
+                "window_end_ms": e.window_end_ms,
             }
             for e in errs
         ],

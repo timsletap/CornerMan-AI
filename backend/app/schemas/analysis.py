@@ -17,6 +17,7 @@ class StrikeEventResponse(BaseModel):
     strike_type: StrikeType
     hand: Hand
     hand_role: HandRole | None = None
+    onset_ms: int | None = None
     velocity: float | None
     keypoints: dict[str, Any] | None
 
@@ -32,6 +33,8 @@ class ErrorFlagResponse(BaseModel):
     severity: Severity
     details: dict[str, Any] | None
     measured_value_sw: float | None = None
+    window_start_ms: int | None = None
+    window_end_ms: int | None = None
     user_disputed: bool
 
     model_config = {"from_attributes": True}

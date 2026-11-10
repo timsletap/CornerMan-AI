@@ -43,7 +43,9 @@ class Settings(BaseSettings):
     # Body-relative units (VIS-11): sw = shoulder widths. Not yet tuned on labeled dev clips.
     STRIKE_VELOCITY_THRESHOLD: float = 6.0  # sw/s, wrist speed relative to the shoulders
     GUARD_DISTANCE_THRESHOLD: float = 0.6  # sw, off-hand wrist to nose
-    TELEGRAPH_VARIANCE_THRESHOLD: float = 0.10
+    TELEGRAPH_OFFSET_THRESHOLD: float = 0.2  # sw, elbow lateral swing before the punch starts
+    TELEGRAPH_WINDOW_FRAMES: int = 10  # frames before motion onset checked for a telegraph
+    ONSET_FRACTION: float = 0.2  # punch starts where wrist speed reaches this share of its peak
     OCCLUSION_CONFIDENCE_THRESHOLD: float = 0.7
     OCCLUSION_PAUSE_SECONDS: float = 0.5
     YOLO_MODEL_NAME: str = "yolov8m-pose.pt"

@@ -204,8 +204,11 @@ Key settings in `backend/.env`:
 | `TARGET_SELECT_SECONDS` | 2.0 | Opening window used to pick the fighter to analyze |
 | `REACQUIRE_IOU` | 0.3 | Minimum box overlap to re-acquire the fighter under a new track id |
 | `REACQUIRE_SECONDS` | 1.0 | How long after losing the fighter re-acquisition by overlap is allowed |
-| `STRIKE_VELOCITY_THRESHOLD` | 15.0 | Wrist velocity threshold for strike detection |
-| `GUARD_DISTANCE_THRESHOLD` | 0.35 | Normalized guard distance threshold |
+| `STRIKE_VELOCITY_THRESHOLD` | 6.0 | Wrist speed that counts as a strike, in shoulder widths per second (sw/s) |
+| `GUARD_DISTANCE_THRESHOLD` | 0.6 | Off-hand wrist to nose distance that counts as a dropped guard, in sw |
+| `TELEGRAPH_OFFSET_THRESHOLD` | 0.2 | Elbow swing before the punch starts that counts as a chicken wing, in sw |
+| `TELEGRAPH_WINDOW_FRAMES` | 10 | Frames before the punch starts that are checked for a telegraph |
+| `ONSET_FRACTION` | 0.2 | A punch starts where wrist speed reaches this share of its peak |
 | `ANTHROPIC_API_KEY` | (empty) | Set for AI coaching |
 | `SECRET_KEY` | (placeholder) | JWT signing key. With `APP_ENV=production` it must be at least 32 bytes and not the default, and `DEBUG` must be false |
 
