@@ -162,8 +162,12 @@ class Punch:
     """Multiplier on ``PUNCH_SW``."""
     drop: float = 0.0
     """How far the off hand drops (straight down) while the punch is thrown."""
-    drop_frames: tuple[int, int] = (0, 5)
-    """Frames relative to ``start`` (inclusive) during which the off hand is dropped."""
+    drop_frames: tuple[int, int] = (-8, 5)
+    """Frames relative to ``start``: the off hand starts lowering at the first and
+    starts coming back up after the second."""
+    drop_ramp: int = 8
+    """Frames the off hand takes to go down (and to come back up): hands drop slower
+    than they punch."""
     flare: float = 0.0
     """Elbow swing away from the body, peaking 4 frames before ``start`` and back in
     by ``start`` (the telegraph)."""
@@ -222,8 +226,10 @@ def punching(
                 else:
                     kps[elbow, 0] += ext * dx * 0.9
                     kps[elbow, 1] += ext * dy * 0.9
-            if p.drop and p.drop_frames[0] <= k <= p.drop_frames[1]:
-                kps[off, 1] += p.drop * sw
+            if p.drop:
+                down = (k - p.drop_frames[0] + 1) / p.drop_ramp
+                up = (p.drop_frames[1] + p.drop_ramp - k) / p.drop_ramp
+                kps[off, 1] += p.drop * sw * float(np.clip(min(down, up), 0.0, 1.0))
             if p.flare and -8 <= k <= 0:
                 outward = 1.0 if left else -1.0  # image x of the fighter's own side
                 kps[elbow, 0] += outward * p.flare * sw * (1 - abs(k + 4) / 4)

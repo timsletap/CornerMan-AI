@@ -25,6 +25,9 @@ from app.vision.types import (
     VisionConfig,
 )
 
+GUARD_FRAMES_AFTER_PEAK = 3
+"""The guard is checked from motion onset to this many frames after the velocity peak."""
+
 MIN_TELEGRAPH_FRAMES = 5
 """Fewest confident pre-onset frames needed to judge a telegraph."""
 
@@ -43,19 +46,35 @@ def analyze_guard(
     sig: Signals,
     cfg: VisionConfig,
 ) -> list[ErrorDetection]:
-    """VIS-03: off-hand wrist too far from the nose at the strike frame.
+    """VIS-14: the off hand leaves the chin line at any point during the punch.
 
-    The distance is in shoulder widths (VIS-11); ``cfg.guard_distance_threshold`` is in sw.
+    The window runs from the strike's motion onset to ``GUARD_FRAMES_AFTER_PEAK`` analyzed
+    frames after its velocity peak. The measure is the largest distance from the
+    off-hand wrist to the nose in that window, in sw; the flag is raised above
+    ``cfg.guard_distance_threshold`` (``medium`` above 1.5x, ``high`` above 2x).
     """
     errors: list[ErrorDetection] = []
     threshold = cfg.guard_distance_threshold
+    n = len(sig)
     for strike_idx, strike in enumerate(strikes):
-        i = strike.index
         off_wrist = RIGHT_WRIST if strike.hand == "left" else LEFT_WRIST
-        if sig.conf[i, off_wrist] < MIN_KEYPOINT_CONF or sig.conf[i, NOSE] < MIN_KEYPOINT_CONF:
+        first = strike.onset_index if 0 <= strike.onset_index <= strike.index else strike.index
+        last_frame = sig.frame_numbers[strike.index] + GUARD_FRAMES_AFTER_PEAK * cfg.skip
+        last = strike.index
+        while last + 1 < n and sig.frame_numbers[last + 1] <= last_frame:
+            last += 1
+
+        window = np.arange(first, last + 1)
+        usable = window[
+            (sig.conf[window, off_wrist] >= MIN_KEYPOINT_CONF)
+            & (sig.conf[window, NOSE] >= MIN_KEYPOINT_CONF)
+        ]
+        if len(usable) == 0:
             continue
 
-        distance = float(np.linalg.norm(sig.rel[i, off_wrist] - sig.rel[i, NOSE]))
+        distances = np.linalg.norm(sig.rel[usable, off_wrist] - sig.rel[usable, NOSE], axis=1)
+        worst = int(distances.argmax())
+        distance = float(distances[worst])
         if distance > threshold:
             errors.append(
                 ErrorDetection(
@@ -67,9 +86,12 @@ def analyze_guard(
                         "off_hand": "right" if strike.hand == "left" else "left",
                         "distance_sw": round(distance, 3),
                         "threshold": threshold,
+                        "worst_ms": int(sig.timestamps_ms[usable[worst]]),
                     },
                     related_strike_index=strike_idx,
                     measured_value_sw=round(distance, 3),
+                    window_start_ms=int(sig.timestamps_ms[first]),
+                    window_end_ms=int(sig.timestamps_ms[last]),
                 )
             )
     return errors
