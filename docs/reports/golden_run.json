@@ -1,5 +1,5 @@
 {
-  "git_sha": "8686ea0",
+  "git_sha": "4538ff3",
   "clip": {
     "path": "tests/golden/clip.mp4",
     "duration_s": 4.98,
@@ -18,11 +18,11 @@
   },
   "hardware": "Intel64 Family 6 Model 198 Stepping 2, GenuineIntel, 24 logical cores, CPU only, torch 2.14.1+cpu",
   "throughput": {
-    "stage1_seconds": 23.08,
-    "stage1_fps": 6.6,
-    "stage1_x_realtime": 0.22,
-    "stages23_ms": 15.9,
-    "stages23_x_realtime": 313,
+    "stage1_seconds": 21.63,
+    "stage1_fps": 7.0,
+    "stage1_x_realtime": 0.23,
+    "stages23_ms": 15.0,
+    "stages23_x_realtime": 332,
     "stages23_repeats": 25
   },
   "detections": {
