@@ -26,6 +26,11 @@ class Hand(str, enum.Enum):
     RIGHT = "right"
 
 
+class HandRole(str, enum.Enum):
+    LEAD = "lead"
+    REAR = "rear"
+
+
 class StrikeEvent(Base):
     __tablename__ = "strike_events"
 
@@ -39,6 +44,8 @@ class StrikeEvent(Base):
     frame_number: Mapped[int] = mapped_column(Integer)
     strike_type: Mapped[StrikeType] = mapped_column(Enum(StrikeType))
     hand: Mapped[Hand] = mapped_column(Enum(Hand))
+    # Lead or rear hand under the stance used for the session (VIS-12)
+    hand_role: Mapped[HandRole | None] = mapped_column(Enum(HandRole), nullable=True)
     velocity: Mapped[float | None] = mapped_column(Float, nullable=True)
     keypoints: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

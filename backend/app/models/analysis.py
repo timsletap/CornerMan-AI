@@ -43,6 +43,10 @@ class AnalysisSession(Base):
     poses_cache_path: Mapped[str | None] = mapped_column(Text, nullable=True)
     # Tracker id of the analyzed fighter (VIS-09): requested, or chosen by the pipeline
     target_track_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # Stance used to tell jab from cross, and where it came from (VIS-12):
+    # override, profile, detected, or default
+    stance_used: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    stance_source: Mapped[str | None] = mapped_column(String(16), nullable=True)
     processing_started_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )

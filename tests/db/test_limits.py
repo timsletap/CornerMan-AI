@@ -139,7 +139,9 @@ def pipeline(
     Returns the mocked LLM coaching call."""
     monkeypatch.setattr(analysis_tasks, "SessionLocal", sessionmaker(bind=db_engine))
     monkeypatch.setattr(analysis_tasks, "get_video_path", lambda video: "/dev/null")
-    monkeypatch.setattr(analysis_tasks, "run_vision_analysis", lambda path, sid: VISION_RESULT)
+    monkeypatch.setattr(
+        analysis_tasks, "run_vision_analysis", lambda path, sid, **kwargs: VISION_RESULT
+    )
     monkeypatch.setattr(analysis_tasks, "update_progress", lambda *a, **k: None)
     monkeypatch.setattr(analysis_tasks, "clear_progress", lambda *a, **k: None)
     coach = MagicMock(

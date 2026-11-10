@@ -71,6 +71,57 @@ def fighter(
     return kps
 
 
+def side_fighter(
+    stance: str = "orthodox",
+    facing: float = 1.0,
+    cx: float = WIDTH / 2,
+    cy: float = 250.0,
+    sw: float = 100.0,
+    conf: float = 0.9,
+) -> np.ndarray:
+    """(17, 3) keypoints for a fighter seen from the side, facing image right (``facing``
+    = 1) or left (-1). The lead side (left for orthodox) is forward; the shoulders nearly
+    overlap in the image, so the body scale comes from the torso (1.6 sw long)."""
+    lead, rear = ("LEFT", "RIGHT") if stance == "orthodox" else ("RIGHT", "LEFT")
+    idx = {
+        "LEFT_SHOULDER": LEFT_SHOULDER,
+        "RIGHT_SHOULDER": RIGHT_SHOULDER,
+        "LEFT_ELBOW": LEFT_ELBOW,
+        "RIGHT_ELBOW": RIGHT_ELBOW,
+        "LEFT_WRIST": LEFT_WRIST,
+        "RIGHT_WRIST": RIGHT_WRIST,
+        "LEFT_HIP": LEFT_HIP,
+        "RIGHT_HIP": RIGHT_HIP,
+        "LEFT_KNEE": LEFT_KNEE,
+        "RIGHT_KNEE": RIGHT_KNEE,
+        "LEFT_ANKLE": LEFT_ANKLE,
+        "RIGHT_ANKLE": RIGHT_ANKLE,
+    }
+    layout = {
+        NOSE: (0.3, -0.5),
+        LEFT_EYE: (0.27, -0.57),
+        RIGHT_EYE: (0.25, -0.57),
+        LEFT_EAR: (0.1, -0.55),
+        RIGHT_EAR: (0.08, -0.55),
+        idx[f"{lead}_SHOULDER"]: (0.12, 0.0),
+        idx[f"{rear}_SHOULDER"]: (-0.12, 0.0),
+        idx[f"{lead}_ELBOW"]: (0.35, 0.55),
+        idx[f"{rear}_ELBOW"]: (0.05, 0.6),
+        idx[f"{lead}_WRIST"]: (0.6, -0.3),
+        idx[f"{rear}_WRIST"]: (0.35, -0.35),
+        idx[f"{lead}_HIP"]: (0.08, 1.6),
+        idx[f"{rear}_HIP"]: (-0.08, 1.6),
+        idx[f"{lead}_KNEE"]: (0.35, 2.4),
+        idx[f"{rear}_KNEE"]: (-0.3, 2.4),
+        idx[f"{lead}_ANKLE"]: (0.6, 3.2),
+        idx[f"{rear}_ANKLE"]: (-0.6, 3.2),
+    }
+    kps = np.zeros((17, 3))
+    for i, (dx, dy) in layout.items():
+        kps[i] = (cx + facing * dx * sw, cy + dy * sw, conf)
+    return kps
+
+
 def bbox(kps: np.ndarray, pad: float = 20.0) -> list[float]:
     xs, ys = kps[:, 0], kps[:, 1]
     return [
@@ -116,10 +167,12 @@ class Punch:
     flare: float = 0.0
     """Elbow swing away from the body, peaking 4 frames before ``start`` and back in
     by ``start`` (the telegraph)."""
-    elbow_follow: float = 0.5
-    """Fraction of the wrist travel the elbow makes during the punch."""
+    kind: str = "straight"
+    """``straight``: the elbow lines up between shoulder and wrist at full extension.
+    ``bent`` (hooks, uppercuts): the elbow travels with the wrist and stays bent."""
     wrist_start: tuple[float, float] | None = None
-    """Wrist position relative to the guard position at the start (e.g. low for body shots)."""
+    """Wrist position relative to the guard position, held for the whole clip (e.g. low
+    for body shots)."""
 
 
 def punching(
@@ -154,15 +207,21 @@ def punching(
             elbow = LEFT_ELBOW if left else RIGHT_ELBOW
             off = RIGHT_WRIST if left else LEFT_WRIST
             dx, dy = p.direction or direction
-            if p.wrist_start is not None and -15 <= k < len(PUNCH_SW) + 5:
+            if p.wrist_start is not None:
                 kps[p.wrist, 0] += p.wrist_start[0] * sw
                 kps[p.wrist, 1] += p.wrist_start[1] * sw
             if 0 <= k < len(PUNCH_SW):
                 ext = PUNCH_SW[k] * p.reach * sw
                 kps[p.wrist, 0] += ext * dx
                 kps[p.wrist, 1] += ext * dy
-                kps[elbow, 0] += ext * dx * p.elbow_follow
-                kps[elbow, 1] += ext * dy * p.elbow_follow
+                if p.kind == "straight":
+                    a = PUNCH_SW[k] / max(PUNCH_SW)
+                    shoulder = LEFT_SHOULDER if left else RIGHT_SHOULDER
+                    lined_up = (kps[shoulder, :2] + kps[p.wrist, :2]) / 2
+                    kps[elbow, :2] = (1 - a) * kps[elbow, :2] + a * lined_up
+                else:
+                    kps[elbow, 0] += ext * dx * 0.9
+                    kps[elbow, 1] += ext * dy * 0.9
             if p.drop and p.drop_frames[0] <= k <= p.drop_frames[1]:
                 kps[off, 1] += p.drop * sw
             if p.flare and -8 <= k <= 0:
