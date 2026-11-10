@@ -1,5 +1,5 @@
 {
-  "git_sha": "dc7219a",
+  "git_sha": "8686ea0",
   "clip": {
     "path": "tests/golden/clip.mp4",
     "duration_s": 4.98,
@@ -11,18 +11,18 @@
   "settings": {
     "STRIKE_VELOCITY_THRESHOLD": 6.0,
     "GUARD_DISTANCE_THRESHOLD": 0.6,
-    "TELEGRAPH_VARIANCE_THRESHOLD": 0.02,
+    "TELEGRAPH_OFFSET_THRESHOLD": 0.2,
     "OCCLUSION_CONFIDENCE_THRESHOLD": 0.7,
     "OCCLUSION_PAUSE_SECONDS": 0.5,
     "VISION_FRAME_SKIP": 1
   },
   "hardware": "Intel64 Family 6 Model 198 Stepping 2, GenuineIntel, 24 logical cores, CPU only, torch 2.14.1+cpu",
   "throughput": {
-    "stage1_seconds": 21.43,
-    "stage1_fps": 7.1,
-    "stage1_x_realtime": 0.23,
-    "stages23_ms": 15.4,
-    "stages23_x_realtime": 323,
+    "stage1_seconds": 23.08,
+    "stage1_fps": 6.6,
+    "stage1_x_realtime": 0.22,
+    "stages23_ms": 15.9,
+    "stages23_x_realtime": 313,
     "stages23_repeats": 25
   },
   "detections": {
