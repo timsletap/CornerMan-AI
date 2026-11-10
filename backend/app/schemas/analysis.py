@@ -1,13 +1,13 @@
 import uuid
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
 from app.models.analysis import AnalysisStatus
 from app.models.error_flag import ErrorType, Severity
 from app.models.feedback import Rating
-from app.models.strike import Hand, StrikeType
+from app.models.strike import Hand, HandRole, StrikeType
 
 
 class StrikeEventResponse(BaseModel):
@@ -16,6 +16,7 @@ class StrikeEventResponse(BaseModel):
     frame_number: int
     strike_type: StrikeType
     hand: Hand
+    hand_role: HandRole | None = None
     velocity: float | None
     keypoints: dict[str, Any] | None
 
@@ -66,6 +67,8 @@ class AnalysisSessionResponse(BaseModel):
     coach_feedback: str | None
     annotated_video_path: str | None
     target_track_id: int | None = None
+    stance_used: str | None = None
+    stance_source: str | None = None
     processing_started_at: datetime | None
     processing_completed_at: datetime | None
     created_at: datetime
@@ -85,6 +88,9 @@ class AnalyzeRequest(BaseModel):
 
     target_track_id: int | None = Field(
         default=None, description="Tracker id of the fighter to analyze, from a previous run"
+    )
+    stance_override: Literal["orthodox", "southpaw"] | None = Field(
+        default=None, description="Stance to classify with, instead of the profile's"
     )
 
 

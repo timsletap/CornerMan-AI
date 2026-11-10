@@ -9,7 +9,7 @@ from app.database import SessionLocal
 from app.models.analysis import AnalysisSession, AnalysisStatus
 from app.models.drill import Drill, DrillRecommendation
 from app.models.error_flag import ErrorFlag, ErrorType, Severity
-from app.models.strike import Hand, StrikeEvent, StrikeType
+from app.models.strike import Hand, HandRole, StrikeEvent, StrikeType
 from app.models.user import User
 from app.models.video import Video
 from app.services.coaching import fallback_report, generate_coaching_feedback
@@ -94,7 +94,13 @@ def run_analysis_pipeline(self, session_id: str, video_id: str) -> dict:
         # 2. Resolve video path and run vision pipeline
         video_path = get_video_path(video)
         logger.info("Running vision analysis on %s for session %s", video_path, session_id)
-        vision_json = run_vision_analysis(video_path, sid, session.target_track_id)
+        vision_json = run_vision_analysis(
+            video_path,
+            sid,
+            target_track_id=session.target_track_id,
+            stance_override=session.stance_used if session.stance_source == "override" else None,
+            profile_stance=user.stance.value if user.stance else None,
+        )
 
         # 3. Persist vision results on session
         update_progress(session_id, "persisting", 0.90, "Saving analysis results...")
@@ -111,6 +117,8 @@ def run_analysis_pipeline(self, session_id: str, video_id: str) -> dict:
             session.annotated_video_path = annotated_path
         session.poses_cache_path = vision_json.get("poses_cache_path")
         session.target_track_id = vision_json.get("target_track_id")
+        session.stance_used = vision_json.get("stance_used")
+        session.stance_source = vision_json.get("stance_source")
 
         # 4. Persist StrikeEvent rows
         strike_events_data = vision_json.get("strike_events", [])
@@ -125,6 +133,7 @@ def run_analysis_pipeline(self, session_id: str, video_id: str) -> dict:
                 frame_number=se.get("frame_number", 0),
                 strike_type=strike_type,
                 hand=hand,
+                hand_role=HandRole(se["hand_role"]) if se.get("hand_role") else None,
                 velocity=se.get("velocity"),
                 keypoints=se.get("keypoints"),
             )

@@ -71,6 +71,8 @@ class StrikeDetection:
     """Direction of that motion as (dx, dy) in pixels/s, y down (for drawing)."""
     wrist_position: tuple[float, float]
     strike_type: str = ""
+    hand_role: str = ""
+    """``lead`` or ``rear`` under the stance used (VIS-12)."""
     keypoints_snapshot: dict[str, Any] = field(default_factory=dict)
     index: int = -1
     """Position of the strike frame in the analyzed frame sequence."""

@@ -137,7 +137,8 @@ def run_clip(
     poses, stage1 = load_poses(clip_id, clips_dir, cfg, from_cache)
 
     start = time.perf_counter()
-    analysis = analyze_poses(poses, cfg)
+    # The label's stance stands in for the fighter's profile, as in the app.
+    analysis = analyze_poses(poses, cfg, profile_stance=labels.fighter.stance)
     stages23 = time.perf_counter() - start
 
     strikes, errors = predictions(analysis)

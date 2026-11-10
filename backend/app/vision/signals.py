@@ -55,6 +55,8 @@ class Signals:
     """(N,) seconds from video start."""
     xy: FloatArray
     """(N, 17, 2) smoothed positions, pixels."""
+    raw_xy: FloatArray
+    """(N, 17, 2) positions as the pose model gave them, pixels."""
     conf: FloatArray
     """(N, 17) raw keypoint confidence; below ``MIN_KEYPOINT_CONF`` the position is held."""
     scale: FloatArray
@@ -201,6 +203,7 @@ def build_signals(frames: Sequence[FrameKeypoints], meta: VideoMeta, cfg: Vision
             timestamps_ms=np.zeros(0, dtype=np.int64),
             t_s=np.zeros(0),
             xy=empty,
+            raw_xy=empty.copy(),
             conf=np.zeros((0, 17)),
             scale=np.zeros(0),
             rel=empty.copy(),
@@ -227,6 +230,7 @@ def build_signals(frames: Sequence[FrameKeypoints], meta: VideoMeta, cfg: Vision
         timestamps_ms=np.array([fk.timestamp_ms for fk in frames], dtype=np.int64),
         t_s=t_s,
         xy=xy,
+        raw_xy=raw[:, :, :2].copy(),
         conf=conf,
         scale=scale,
         rel=(xy - mid[:, None, :]) / scale[:, None, None],
@@ -315,6 +319,32 @@ def keypoint_velocity(
     vector[1:] = v
     speed[1:] = np.linalg.norm(v, axis=1)
     return speed, vector
+
+
+def max_joint_angle(
+    sig: Signals, a: int, b: int, c: int, start: int, frames_after: int
+) -> float | None:
+    """Largest angle at keypoint ``b`` (degrees) from ``start`` to ``frames_after`` source
+    frames later, or None when the three keypoints are never all confident.
+
+    Measured on the unsmoothed keypoints: a joint is fully straight for only a frame or
+    two, and the smoothing would flatten exactly that moment.
+    """
+    best: float | None = None
+    first_frame = int(sig.frame_numbers[start])
+    for i in range(start, len(sig)):
+        if int(sig.frame_numbers[i]) - first_frame > frames_after:
+            break
+        if min(sig.conf[i, a], sig.conf[i, b], sig.conf[i, c]) < MIN_KEYPOINT_CONF:
+            continue
+        pa, pb, pc = sig.raw_xy[i, a], sig.raw_xy[i, b], sig.raw_xy[i, c]
+        angle = compute_angle(
+            (float(pa[0]), float(pa[1]), 1.0),
+            (float(pb[0]), float(pb[1]), 1.0),
+            (float(pc[0]), float(pc[1]), 1.0),
+        )
+        best = angle if best is None else max(best, angle)
+    return best
 
 
 def compute_angle(a: Keypoint, b: Keypoint, c: Keypoint) -> float:

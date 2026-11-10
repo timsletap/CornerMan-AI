@@ -69,6 +69,8 @@ def trigger_analysis(
         video_id=video.id,
         status=AnalysisStatus.QUEUED,
         target_track_id=body.target_track_id if body else None,
+        stance_used=body.stance_override if body else None,
+        stance_source="override" if body and body.stance_override else None,
     )
     db.add(session)
     db.commit()

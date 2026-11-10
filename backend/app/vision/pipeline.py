@@ -15,7 +15,7 @@ from typing import Any
 
 from app.services.progress import update_progress
 from app.vision import errors as error_stage
-from app.vision import pose, render, strikes, tracking
+from app.vision import pose, render, stance, strikes, tracking
 from app.vision.signals import Signals, build_signals, occluded_ranges, smoothed_frames
 from app.vision.types import (
     ErrorDetection,
@@ -41,6 +41,9 @@ class Analysis:
     identity_switches: int = 0
     tracks: list[tracking.TrackSummary] = field(default_factory=list)
     signals: Signals | None = field(default=None, compare=False, repr=False)
+    stance_used: str = "orthodox"
+    stance_source: str = "default"
+    """``override``, ``profile``, ``detected``, or ``default`` (VIS-12)."""
 
     @property
     def guard_score(self) -> float:
@@ -48,18 +51,25 @@ class Analysis:
 
 
 def analyze_poses(
-    poses: pose.Poses, cfg: VisionConfig, target_track_id: int | None = None
+    poses: pose.Poses,
+    cfg: VisionConfig,
+    target_track_id: int | None = None,
+    stance_override: str | None = None,
+    profile_stance: str | None = None,
 ) -> Analysis:
     """Stages 2 and 3 on cached poses. No model, I/O, or progress reporting.
 
     ``target_track_id`` overrides the automatic choice of fighter (VIS-09).
+    The stance is ``stance_override``, else ``profile_stance``, else detected from
+    the footage (VIS-12).
     """
     meta = poses.meta
     target = tracking.follow_target(poses.frames, meta, cfg, target_track_id)
     sig = build_signals(target.frames, meta, cfg)
     frames = smoothed_frames(target.frames, sig)
     ranges, active = occluded_ranges(frames, meta, cfg)
-    found = strikes.detect_strikes(sig, frames, active, meta, cfg)
+    stance_used, stance_source = stance.resolve_stance(sig, stance_override, profile_stance)
+    found = strikes.detect_strikes(sig, frames, active, meta, cfg, stance_used)
     errs = error_stage.analyze_guard(found, sig, cfg) + error_stage.detect_telegraph(
         found, frames, cfg
     )
@@ -73,6 +83,8 @@ def analyze_poses(
         identity_switches=target.identity_switches,
         tracks=target.tracks,
         signals=sig,
+        stance_used=stance_used,
+        stance_source=stance_source,
     )
 
 
@@ -119,6 +131,8 @@ def build_output_json(
         "frames_analyzed": len(analysis.frames),
         "primary_actor_detected": len(analysis.frames) > 0,
         "target_track_id": analysis.target_track_id,
+        "stance_used": analysis.stance_used,
+        "stance_source": analysis.stance_source,
         "tracks": [
             {
                 "track_id": t.track_id,
@@ -143,6 +157,7 @@ def build_output_json(
                 "frame_number": s.frame_number,
                 "timestamp_ms": s.timestamp_ms,
                 "hand": s.hand,
+                "hand_role": s.hand_role,
                 "strike_type": s.strike_type,
                 "velocity": round(s.velocity, 2),
                 "wrist_position": {
@@ -181,12 +196,17 @@ def build_output_json(
 
 
 def run_vision_analysis(
-    video_path: str, session_id: uuid.UUID, target_track_id: int | None = None
+    video_path: str,
+    session_id: uuid.UUID,
+    target_track_id: int | None = None,
+    stance_override: str | None = None,
+    profile_stance: str | None = None,
 ) -> dict[str, Any]:
     """Run the full vision pipeline on a video file. Called from Celery (sync).
 
     ``target_track_id`` picks the fighter to analyze by tracker id (from a previous
     run's ``tracks``); by default the largest, most central person is chosen.
+    ``stance_override`` and ``profile_stance`` are ``orthodox`` or ``southpaw``.
     """
     cfg = VisionConfig.from_settings()
     sid = str(session_id)
@@ -194,7 +214,7 @@ def run_vision_analysis(
     poses = load_or_extract_poses(video_path, cfg, sid)
 
     update_progress(sid, "strike_detection", 0.65, "Detecting strikes from velocity data...")
-    analysis = analyze_poses(poses, cfg, target_track_id)
+    analysis = analyze_poses(poses, cfg, target_track_id, stance_override, profile_stance)
     update_progress(sid, "guard_analysis", 0.70, "Analyzing guard integrity...")
     update_progress(sid, "telegraph_detection", 0.75, "Detecting telegraph patterns...")
 

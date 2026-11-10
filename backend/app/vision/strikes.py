@@ -7,14 +7,19 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from app.vision.signals import Signals, compute_angle, keypoint_velocity
+from app.vision.signals import (
+    TORSO_PER_SHOULDER_WIDTH,
+    Signals,
+    keypoint_velocity,
+    max_joint_angle,
+)
+from app.vision.stance import hand_role
 from app.vision.types import (
     COCO_KEYPOINTS,
     LEFT_ELBOW,
     LEFT_HIP,
     LEFT_SHOULDER,
     LEFT_WRIST,
-    NOSE,
     NUM_KEYPOINTS,
     RIGHT_ELBOW,
     RIGHT_HIP,
@@ -36,12 +41,14 @@ def detect_strikes(
     active_frames: set[int],
     meta: VideoMeta,
     cfg: VisionConfig,
+    stance: str = "orthodox",
 ) -> list[StrikeDetection]:
     """VIS-02: local wrist-speed maxima above the threshold, debounced, classified.
 
     Wrist speed is relative to the shoulder midpoint in sw/s (VIS-11), so walking or a
     moving camera does not count as punching. ``frames`` are the smoothed frames that
-    ``sig`` was built from (same order).
+    ``sig`` was built from (same order). ``stance`` (``orthodox`` or ``southpaw``)
+    decides which hand is the lead (VIS-12).
     """
     strikes: list[StrikeDetection] = []
     n = len(sig)
@@ -89,49 +96,58 @@ def detect_strikes(
 
     strikes.sort(key=lambda s: s.frame_number)
     for strike in strikes:
-        strike.strike_type = classify_strike(
-            frames[strike.index], strike.hand, strike.velocity_vector, meta
-        )
+        strike.hand_role = hand_role(strike.hand, stance)
+        strike.strike_type = classify_strike(sig, strike.index, strike.hand, strike.hand_role)
     return strikes
 
 
-def classify_strike(
-    fk: FrameKeypoints,
-    hand: str,
-    velocity_vector: tuple[float, float],
-    meta: VideoMeta,
-) -> str:
-    """Classify strike type using biomechanical heuristics."""
+ELBOW_WINDOW_FRAMES = 3
+"""Frames after the velocity peak over which the elbow may straighten."""
+
+BODY_LINE_FRACTION = 0.3
+"""The body-shot line sits this far from the shoulder midpoint toward the hip midpoint."""
+
+
+def classify_strike(sig: Signals, index: int, hand: str, role: str) -> str:
+    """VIS-12: strike type from the wrist's position and direction at the velocity peak.
+
+    Rules, in order:
+      1. ``body_shot``: the wrist is below the line 30% of the way from the shoulder
+         midpoint to the hip midpoint.
+      2. ``uppercut``: the wrist moves mostly upward (``|dy| > 1.5 |dx|``, rising).
+      3. ``hook``: the wrist moves mostly sideways (``|dx| > 1.2 |dy|``) and the elbow
+         stays bent (angle at the elbow under 120 degrees through the punch).
+      4. otherwise a straight punch: ``jab`` from the lead hand, ``cross`` from the rear.
+
+    The elbow angle is the largest seen from the peak to ``ELBOW_WINDOW_FRAMES`` source
+    frames after it: a straight punch is still bent at its velocity peak and only
+    straightens at full extension, while a hook stays bent.
+
+    Args:
+        index: position of the velocity peak in ``sig``.
+        hand: ``left`` or ``right`` (anatomical).
+        role: ``lead`` or ``rear`` for that hand under the resolved stance.
+    """
     wrist_idx = LEFT_WRIST if hand == "left" else RIGHT_WRIST
     elbow_idx = LEFT_ELBOW if hand == "left" else RIGHT_ELBOW
     shoulder_idx = LEFT_SHOULDER if hand == "left" else RIGHT_SHOULDER
 
-    wrist = fk.keypoints[wrist_idx]
-    elbow = fk.keypoints[elbow_idx]
-    shoulder = fk.keypoints[shoulder_idx]
-    nose = fk.keypoints[NOSE]
-    hip_mid_y = (fk.keypoints[LEFT_HIP][1] + fk.keypoints[RIGHT_HIP][1]) / 2
-
-    dx, dy = velocity_vector
-
-    # Body shot: wrist below shoulder midline
-    shoulder_hip_mid = shoulder[1] + (hip_mid_y - shoulder[1]) * 0.3
-    if wrist[1] > shoulder_hip_mid:
+    rel = sig.rel
+    wrist = rel[index, wrist_idx]
+    hip_mid_y = float(rel[index, LEFT_HIP, 1] + rel[index, RIGHT_HIP, 1]) / 2
+    hips_ok = bool(sig.ok(LEFT_HIP)[index] and sig.ok(RIGHT_HIP)[index])
+    # Relative to the shoulder midpoint (y = 0); the hips sit about 1.6 sw below it.
+    torso = hip_mid_y if hips_ok and hip_mid_y > 0 else TORSO_PER_SHOULDER_WIDTH
+    if float(wrist[1]) > BODY_LINE_FRACTION * torso:
         return "body_shot"
 
-    # Uppercut: dominant upward movement (negative dy in image coords)
-    if abs(dy) > abs(dx) * 1.5 and dy < 0:
+    dx, dy = (float(v) for v in (rel[index, wrist_idx] - rel[index - 1, wrist_idx]))
+    if abs(dy) > 1.5 * abs(dx) and dy < 0:
         return "uppercut"
 
-    # Hook: large horizontal component + bent elbow
-    elbow_angle = compute_angle(shoulder, elbow, wrist)
-    if abs(dx) > abs(dy) * 1.2 and elbow_angle < 120:
-        return "hook"
+    if abs(dx) > 1.2 * abs(dy):
+        angle = max_joint_angle(sig, shoulder_idx, elbow_idx, wrist_idx, index, ELBOW_WINDOW_FRAMES)
+        if angle is not None and angle < 120:
+            return "hook"
 
-    # Cross vs Jab: based on arm extension relative to torso
-    arm_ext = ((wrist[0] - shoulder[0]) ** 2 + (wrist[1] - shoulder[1]) ** 2) ** 0.5
-    torso_height = abs(nose[1] - hip_mid_y) if nose[2] > 0.5 else meta.height * 0.4
-    if torso_height > 0 and arm_ext / torso_height > 0.8:
-        return "cross"
-
-    return "jab"
+    return "jab" if role == "lead" else "cross"
