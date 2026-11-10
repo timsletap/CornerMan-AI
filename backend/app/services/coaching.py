@@ -62,7 +62,7 @@ def fallback_report(vision_data: dict[str, Any], note: str) -> dict[str, Any]:
     return {
         "summary": (
             f"Detected {metrics.get('total_strikes', 0)} strikes with an average velocity of "
-            f"{metrics.get('avg_velocity', 0):.1f} u/s. Guard score: {metrics.get('guard_score', 100):.0f}%."
+            f"{metrics.get('avg_velocity', 0):.1f} sw/s. Guard score: {metrics.get('guard_score', 100):.0f}%."
         ),
         "key_metric": f"Guard Score: {metrics.get('guard_score', 100):.0f}%",
         "one_thing": "Focus on keeping your guard hand tight to your chin when throwing combinations.",

@@ -16,7 +16,7 @@ from typing import Any
 from app.services.progress import update_progress
 from app.vision import errors as error_stage
 from app.vision import pose, render, strikes, tracking
-from app.vision.signals import occluded_ranges, smooth_frames
+from app.vision.signals import Signals, build_signals, occluded_ranges, smoothed_frames
 from app.vision.types import (
     ErrorDetection,
     FrameKeypoints,
@@ -33,12 +33,14 @@ class Analysis:
 
     meta: VideoMeta
     frames: list[FrameKeypoints]
+    """The target fighter per analyzed frame, smoothed positions in pixels."""
     occluded_ranges: list[tuple[int, int]]
     strikes: list[StrikeDetection]
     errors: list[ErrorDetection]
     target_track_id: int | None = None
     identity_switches: int = 0
     tracks: list[tracking.TrackSummary] = field(default_factory=list)
+    signals: Signals | None = field(default=None, compare=False, repr=False)
 
     @property
     def guard_score(self) -> float:
@@ -54,10 +56,11 @@ def analyze_poses(
     """
     meta = poses.meta
     target = tracking.follow_target(poses.frames, meta, cfg, target_track_id)
-    frames = smooth_frames(target.frames, meta, cfg)
+    sig = build_signals(target.frames, meta, cfg)
+    frames = smoothed_frames(target.frames, sig)
     ranges, active = occluded_ranges(frames, meta, cfg)
-    found = strikes.detect_strikes(frames, active, meta, cfg)
-    errs = error_stage.analyze_guard(found, frames, cfg) + error_stage.detect_telegraph(
+    found = strikes.detect_strikes(sig, frames, active, meta, cfg)
+    errs = error_stage.analyze_guard(found, sig, cfg) + error_stage.detect_telegraph(
         found, frames, cfg
     )
     return Analysis(
@@ -69,6 +72,7 @@ def analyze_poses(
         target_track_id=target.target_track_id,
         identity_switches=target.identity_switches,
         tracks=target.tracks,
+        signals=sig,
     )
 
 
@@ -157,6 +161,7 @@ def build_output_json(
                 "severity": e.severity,
                 "details": e.details,
                 "related_strike_index": e.related_strike_index,
+                "measured_value_sw": e.measured_value_sw,
             }
             for e in errs
         ],

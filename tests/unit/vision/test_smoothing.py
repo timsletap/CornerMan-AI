@@ -5,9 +5,12 @@ from __future__ import annotations
 import numpy as np
 import synth
 
-from app.vision import signals
+from app.vision import signals, tracking
 from app.vision.pipeline import analyze_poses
-from app.vision.types import LEFT_WRIST, NOSE, RIGHT_WRIST
+from app.vision.pose import Poses
+from app.vision.types import LEFT_WRIST, NOSE, RIGHT_WRIST, VisionConfig
+
+FILTER_OFF = {"one_euro_min_cutoff": 1e6}
 
 
 def _jittery_stationary(n_frames: int, sigma_px: float, seed: int) -> dict[int, np.ndarray]:
@@ -20,6 +23,16 @@ def _jittery_stationary(n_frames: int, sigma_px: float, seed: int) -> dict[int, 
     return frames
 
 
+def _signals(poses: Poses, cfg: VisionConfig) -> signals.Signals:
+    raw = tracking.follow_target(poses.frames, poses.meta, cfg).frames
+    return signals.build_signals(raw, poses.meta, cfg)
+
+
+def _peak_index(poses: Poses, cfg: VisionConfig, wrist: int) -> int:
+    speed, _ = signals.keypoint_velocity(_signals(poses, cfg), wrist, cfg)
+    return int(np.argmax(speed))
+
+
 def test_stationary_fighter_with_5px_jitter_produces_no_strikes() -> None:
     cfg = synth.config()
     for seed in range(5):
@@ -27,51 +40,33 @@ def test_stationary_fighter_with_5px_jitter_produces_no_strikes() -> None:
         assert analyze_poses(poses, cfg).strikes == []
 
 
+def test_unfiltered_jitter_would_produce_strikes() -> None:
+    """The same jitter without the filter crosses the threshold: the filter matters."""
+    poses = synth.sequence(600, [_jittery_stationary(600, 5.0, 0)], track_ids=[1])
+    assert len(analyze_poses(poses, synth.config(**FILTER_OFF)).strikes) > 0
+
+
 def test_jitter_is_reduced() -> None:
-    cfg = synth.config()
     poses = synth.sequence(300, [_jittery_stationary(300, 5.0, 1)], track_ids=[1])
-    raw = analyze_poses(poses, synth.config(one_euro_min_cutoff=1e6)).frames  # filter off
-    smooth = analyze_poses(poses, cfg).frames
-    raw_x = np.array([fk.keypoints[LEFT_WRIST][0] for fk in raw])[30:]
-    smooth_x = np.array([fk.keypoints[LEFT_WRIST][0] for fk in smooth])[30:]
+    raw_x = _signals(poses, synth.config(**FILTER_OFF)).xy[30:, LEFT_WRIST, 0]
+    smooth_x = _signals(poses, synth.config()).xy[30:, LEFT_WRIST, 0]
     assert raw_x.std() > 4.0
     assert smooth_x.std() < 0.5 * raw_x.std()
-
-
-def _peak_frame(frames: list, wrist: int, meta: object) -> int:
-    active = {fk.frame_number for fk in frames}
-    vel = signals.wrist_velocities(frames, active, wrist, meta)  # type: ignore[arg-type]
-    return int(np.argmax([v[0] for v in vel])) + 1
 
 
 def test_punch_peak_timing_is_kept_within_one_frame() -> None:
     cfg = synth.config()
     for wrist in (LEFT_WRIST, RIGHT_WRIST):
         for start in (20, 47):
-            frames = {}
-            offsets = synth.PUNCH_SW
-            for f in range(90):
-                kps = synth.fighter()
-                k = f - start
-                if 0 <= k < len(offsets):
-                    kps[wrist, 0] += offsets[k] * 100
-                    kps[wrist, 1] -= offsets[k] * 30
-                frames[f] = kps
-            poses = synth.sequence(90, [frames], track_ids=[1])
-            from app.vision import tracking
-
-            raw = tracking.follow_target(poses.frames, poses.meta, cfg).frames
-            smooth = signals.smooth_frames(raw, poses.meta, cfg)
-            assert (
-                abs(_peak_frame(smooth, wrist, poses.meta) - _peak_frame(raw, wrist, poses.meta))
-                <= 1
+            poses = synth.sequence(
+                90, [synth.punching(90, [(start, wrist)], direction=(1.0, -0.3))], track_ids=[1]
             )
-            # and the punch is still detected
-            found = analyze_poses(poses, cfg).strikes
-            assert (
-                len(found) == 1
-                and abs(found[0].frame_number - _peak_frame(raw, wrist, poses.meta)) <= 1
-            )
+            raw_peak = _peak_index(poses, synth.config(**FILTER_OFF), wrist)
+            assert raw_peak == start + 1
+            assert abs(_peak_index(poses, cfg, wrist) - raw_peak) <= 1
+            found = analyze_poses(poses, cfg).strikes  # and the punch is still detected
+            assert len(found) == 1
+            assert abs(found[0].frame_number - raw_peak) <= 1
 
 
 def test_low_confidence_points_hold_the_last_filtered_position() -> None:
@@ -83,16 +78,15 @@ def test_low_confidence_points_hold_the_last_filtered_position() -> None:
             kps[LEFT_WRIST] = (5.0, 5.0, 0.2)  # garbage position, low confidence
         frames[f] = kps
     poses = synth.sequence(30, [frames], track_ids=[1])
-    from app.vision import tracking
 
-    raw = tracking.follow_target(poses.frames, poses.meta, cfg).frames
-    smooth = signals.smooth_frames(raw, poses.meta, cfg)
+    analysis = analyze_poses(poses, cfg)
+
     guard_x = synth.fighter()[LEFT_WRIST, 0]
-    for fk in smooth[10:20]:
+    for fk in analysis.frames[10:20]:
         assert abs(fk.keypoints[LEFT_WRIST][0] - guard_x) < 1e-6  # held, not the garbage
         assert fk.keypoints[LEFT_WRIST][2] == 0.2  # still marked low confidence
-    assert abs(smooth[25].keypoints[NOSE][0] - synth.fighter()[NOSE, 0]) < 1e-6
-    assert analyze_poses(poses, cfg).strikes == []
+    assert abs(analysis.frames[25].keypoints[NOSE][0] - synth.fighter()[NOSE, 0]) < 1e-6
+    assert analysis.strikes == []
 
 
 def test_one_euro_starts_at_first_valid_sample_and_handles_gaps() -> None:

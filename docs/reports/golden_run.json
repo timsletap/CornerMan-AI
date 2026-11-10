@@ -1,5 +1,5 @@
 {
-  "git_sha": "dae775c",
+  "git_sha": "4107e04",
   "clip": {
     "path": "tests/golden/clip.mp4",
     "duration_s": 4.98,
@@ -9,8 +9,8 @@
   },
   "model": "yolov8m-pose.pt",
   "settings": {
-    "STRIKE_VELOCITY_THRESHOLD": 1.0,
-    "GUARD_DISTANCE_THRESHOLD": 0.35,
+    "STRIKE_VELOCITY_THRESHOLD": 6.0,
+    "GUARD_DISTANCE_THRESHOLD": 0.6,
     "TELEGRAPH_VARIANCE_THRESHOLD": 0.02,
     "OCCLUSION_CONFIDENCE_THRESHOLD": 0.7,
     "OCCLUSION_PAUSE_SECONDS": 0.5,
@@ -18,11 +18,11 @@
   },
   "hardware": "Intel64 Family 6 Model 198 Stepping 2, GenuineIntel, 24 logical cores, CPU only, torch 2.14.1+cpu",
   "throughput": {
-    "stage1_seconds": 19.22,
-    "stage1_fps": 7.9,
-    "stage1_x_realtime": 0.26,
-    "stages23_ms": 10.0,
-    "stages23_x_realtime": 499,
+    "stage1_seconds": 18.04,
+    "stage1_fps": 8.4,
+    "stage1_x_realtime": 0.28,
+    "stages23_ms": 11.2,
+    "stages23_x_realtime": 444,
     "stages23_repeats": 25
   },
   "detections": {
@@ -63,7 +63,7 @@
       }
     },
     "coaching": {
-      "summary": "Detected 0 strikes with an average velocity of 0.0 u/s. Guard score: 100%.",
+      "summary": "Detected 0 strikes with an average velocity of 0.0 sw/s. Guard score: 100%.",
       "key_metric": "Guard Score: 100%",
       "one_thing": "Focus on keeping your guard hand tight to your chin when throwing combinations.",
       "prescribed_drill": {

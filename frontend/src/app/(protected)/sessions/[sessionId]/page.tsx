@@ -277,7 +277,7 @@ export default function SessionPage() {
                   {strikeMeta(summary.fastest.strike_type).label.toLowerCase()} at{" "}
                   {formatClock(summary.fastest.timestamp_ms)}
                 </button>{" "}
-                ({summary.fastest.velocity?.toFixed(1)} u/s)
+                ({summary.fastest.velocity?.toFixed(1)} sw/s)
               </p>
             )}
           </Card>

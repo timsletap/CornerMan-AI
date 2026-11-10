@@ -30,6 +30,7 @@ class ErrorFlagResponse(BaseModel):
     frame_number: int
     severity: Severity
     details: dict[str, Any] | None
+    measured_value_sw: float | None = None
     user_disputed: bool
 
     model_config = {"from_attributes": True}

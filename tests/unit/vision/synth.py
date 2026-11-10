@@ -6,6 +6,9 @@ front-facing guard pose; ``punch`` moves one wrist out and back over a few frame
 
 from __future__ import annotations
 
+from collections.abc import Callable, Sequence
+from dataclasses import dataclass
+
 import numpy as np
 import pandas as pd
 import pyarrow as pa
@@ -90,6 +93,87 @@ def punch_offsets(n_frames: int = 6, reach_sw: float = 1.6) -> list[float]:
     return out + out[-2::-1] + [0.0] * (n_frames - 2 * half + 1)
 
 
+PoseFn = Callable[[], np.ndarray]
+
+
+@dataclass(frozen=True)
+class Punch:
+    """One punch in a synthetic sequence. Distances are in shoulder widths (sw)."""
+
+    start: int
+    """Frame of the first wrist motion; speed peaks at ``start + 1``, full extension at
+    ``start + 2``."""
+    wrist: int
+    """LEFT_WRIST or RIGHT_WRIST."""
+    direction: tuple[float, float] | None = None
+    """Wrist travel per unit of extension as (dx, dy), y down; None uses the sequence's."""
+    reach: float = 1.0
+    """Multiplier on ``PUNCH_SW``."""
+    drop: float = 0.0
+    """How far the off hand drops (straight down) while the punch is thrown."""
+    drop_frames: tuple[int, int] = (0, 5)
+    """Frames relative to ``start`` (inclusive) during which the off hand is dropped."""
+    flare: float = 0.0
+    """Elbow swing away from the body, peaking 4 frames before ``start`` and back in
+    by ``start`` (the telegraph)."""
+    elbow_follow: float = 0.5
+    """Fraction of the wrist travel the elbow makes during the punch."""
+    wrist_start: tuple[float, float] | None = None
+    """Wrist position relative to the guard position at the start (e.g. low for body shots)."""
+
+
+def punching(
+    n_frames: int,
+    punches: Sequence[Punch | tuple[int, int]],
+    *,
+    sw: float = 100.0,
+    cx: float = WIDTH / 2,
+    cy: float = 250.0,
+    direction: tuple[float, float] = (1.0, -0.2),
+    drop: float = 0.0,
+    jitter_px: float = 0.0,
+    seed: int = 0,
+    pose: PoseFn | None = None,
+) -> dict[int, np.ndarray]:
+    """One fighter throwing the given punches: {frame_number: (17, 3) keypoints}.
+
+    ``punches`` are ``Punch`` objects or ``(start_frame, wrist)`` pairs using this
+    function's ``direction`` and ``drop``. ``pose`` builds the base pose for each frame
+    (default: front-facing guard at (cx, cy) with shoulder width ``sw`` px).
+    """
+    rng = np.random.default_rng(seed)
+    specs = [
+        p if isinstance(p, Punch) else Punch(start=p[0], wrist=p[1], drop=drop) for p in punches
+    ]
+    frames: dict[int, np.ndarray] = {}
+    for f in range(n_frames):
+        kps = pose() if pose is not None else fighter(cx=cx, cy=cy, sw=sw)
+        for p in specs:
+            k = f - p.start
+            left = p.wrist == LEFT_WRIST
+            elbow = LEFT_ELBOW if left else RIGHT_ELBOW
+            off = RIGHT_WRIST if left else LEFT_WRIST
+            dx, dy = p.direction or direction
+            if p.wrist_start is not None and -15 <= k < len(PUNCH_SW) + 5:
+                kps[p.wrist, 0] += p.wrist_start[0] * sw
+                kps[p.wrist, 1] += p.wrist_start[1] * sw
+            if 0 <= k < len(PUNCH_SW):
+                ext = PUNCH_SW[k] * p.reach * sw
+                kps[p.wrist, 0] += ext * dx
+                kps[p.wrist, 1] += ext * dy
+                kps[elbow, 0] += ext * dx * p.elbow_follow
+                kps[elbow, 1] += ext * dy * p.elbow_follow
+            if p.drop and p.drop_frames[0] <= k <= p.drop_frames[1]:
+                kps[off, 1] += p.drop * sw
+            if p.flare and -8 <= k <= 0:
+                outward = 1.0 if left else -1.0  # image x of the fighter's own side
+                kps[elbow, 0] += outward * p.flare * sw * (1 - abs(k + 4) / 4)
+        if jitter_px:
+            kps[:, :2] += rng.normal(0, jitter_px, size=(17, 2))
+        frames[f] = kps
+    return frames
+
+
 def sequence(
     n_frames: int,
     people: list[dict[int, np.ndarray]],
@@ -133,8 +217,8 @@ def config(**overrides: object) -> VisionConfig:
         "frame_skip": 1,
         "occlusion_confidence": 0.7,
         "occlusion_pause_s": 0.5,
-        "strike_velocity_threshold": 1.0,
-        "guard_distance_threshold": 0.35,
+        "strike_velocity_threshold": 6.0,
+        "guard_distance_threshold": 0.6,
         "telegraph_variance_threshold": 0.10,
     }
     values.update(overrides)
