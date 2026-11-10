@@ -226,14 +226,14 @@ def _draw_strike_overlay(frame: Frame, strike: StrikeDetection, kps: Sequence[Ke
     wrist_idx = LEFT_WRIST if strike.hand == "left" else RIGHT_WRIST
     wx, wy = int(kps[wrist_idx][0]), int(kps[wrist_idx][1])
 
-    scale = 0.3
+    scale = 0.1  # seconds of travel drawn
     dx = int(strike.velocity_vector[0] * scale)
     dy = int(strike.velocity_vector[1] * scale)
     cv2.arrowedLine(
         frame, (wx, wy), (wx + dx, wy + dy), VELOCITY_COLOR, 3, cv2.LINE_AA, tipLength=0.3
     )
 
-    label = f"{strike.strike_type.upper()} {strike.velocity:.1f}u/s"
+    label = f"{strike.strike_type.upper()} {strike.velocity:.1f} sw/s"
     label_y = max(30, wy - 25)
     _draw_label(frame, label, (wx - 40, label_y), STRIKE_FLASH_COLOR)
 
@@ -314,7 +314,7 @@ def _draw_hud(
     if last_strike:
         _put(frame, f"LAST: {last_strike.upper()}", (x_start, 64), 0.45, HUD_TEXT)
     if velocity > 0:
-        _put(frame, f"VEL: {velocity:.1f} u/s", (x_start, 86), 0.45, VELOCITY_COLOR)
+        _put(frame, f"VEL: {velocity:.1f} sw/s", (x_start, 86), 0.45, VELOCITY_COLOR)
 
     # Bottom bar: guard score
     bar_h = 6

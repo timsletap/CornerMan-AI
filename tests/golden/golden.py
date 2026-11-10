@@ -24,13 +24,11 @@ EXPECTED = GOLDEN_DIR / "expected_v1.json"
 SESSION_ID = uuid.UUID("00000000-0000-0000-0000-00000000901d")
 
 # Vision settings pinned for the golden run, so a local .env cannot change the result.
-# The v1 default velocity threshold (15 frame heights/s) almost never fires and the
-# telegraph threshold rarely does, which would leave the strike, guard, and telegraph
-# code untested; these values produce detections of each kind on typical footage.
+# Velocity is in sw/s and guard distance in sw (VIS-11).
 # The pose model still comes from YOLO_MODEL_NAME (expected output assumes yolov8m-pose).
 GOLDEN_SETTINGS: dict[str, Any] = {
-    "STRIKE_VELOCITY_THRESHOLD": 1.0,
-    "GUARD_DISTANCE_THRESHOLD": 0.35,
+    "STRIKE_VELOCITY_THRESHOLD": 6.0,
+    "GUARD_DISTANCE_THRESHOLD": 0.6,
     "TELEGRAPH_VARIANCE_THRESHOLD": 0.02,
     "OCCLUSION_CONFIDENCE_THRESHOLD": 0.7,
     "OCCLUSION_PAUSE_SECONDS": 0.5,

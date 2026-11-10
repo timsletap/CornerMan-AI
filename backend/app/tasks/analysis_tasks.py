@@ -152,6 +152,7 @@ def run_analysis_pipeline(self, session_id: str, video_id: str) -> dict:
                 frame_number=ef.get("frame_number", 0),
                 severity=severity,
                 details=ef.get("details"),
+                measured_value_sw=ef.get("measured_value_sw"),
             )
             db.add(error_obj)
 

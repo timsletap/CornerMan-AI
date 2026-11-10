@@ -7,14 +7,14 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from app.vision.signals import frame_at
+import numpy as np
+
+from app.vision.signals import MIN_KEYPOINT_CONF, Signals
 from app.vision.types import (
     LEFT_ELBOW,
-    LEFT_HIP,
     LEFT_WRIST,
     NOSE,
     RIGHT_ELBOW,
-    RIGHT_HIP,
     RIGHT_WRIST,
     ErrorDetection,
     FrameKeypoints,
@@ -25,53 +25,47 @@ from app.vision.types import (
 TELEGRAPH_WINDOW_FRAMES = 10
 
 
+def severity_band(value: float, threshold: float, medium: float, high: float) -> str:
+    """``low`` above the threshold, ``medium`` above ``medium`` x, ``high`` above ``high`` x."""
+    if value > threshold * high:
+        return "high"
+    if value > threshold * medium:
+        return "medium"
+    return "low"
+
+
 def analyze_guard(
     strikes: Sequence[StrikeDetection],
-    frames: Sequence[FrameKeypoints],
+    sig: Signals,
     cfg: VisionConfig,
 ) -> list[ErrorDetection]:
-    """VIS-03: off-hand wrist too far from the nose at the strike frame."""
+    """VIS-03: off-hand wrist too far from the nose at the strike frame.
+
+    The distance is in shoulder widths (VIS-11); ``cfg.guard_distance_threshold`` is in sw.
+    """
     errors: list[ErrorDetection] = []
     threshold = cfg.guard_distance_threshold
     for strike_idx, strike in enumerate(strikes):
-        fk = frame_at(frames, strike.frame_number, cfg)
-        if fk is None:
+        i = strike.index
+        off_wrist = RIGHT_WRIST if strike.hand == "left" else LEFT_WRIST
+        if sig.conf[i, off_wrist] < MIN_KEYPOINT_CONF or sig.conf[i, NOSE] < MIN_KEYPOINT_CONF:
             continue
 
-        off_wrist_idx = RIGHT_WRIST if strike.hand == "left" else LEFT_WRIST
-        off_wrist = fk.keypoints[off_wrist_idx]
-        nose = fk.keypoints[NOSE]
-
-        if off_wrist[2] < 0.5 or nose[2] < 0.5:
-            continue
-
-        distance = ((off_wrist[0] - nose[0]) ** 2 + (off_wrist[1] - nose[1]) ** 2) ** 0.5
-        hip_mid_y = (fk.keypoints[LEFT_HIP][1] + fk.keypoints[RIGHT_HIP][1]) / 2
-        torso_height = abs(nose[1] - hip_mid_y)
-        if torso_height < 10:
-            continue
-
-        normalized_dist = distance / torso_height
-        if normalized_dist > threshold:
-            if normalized_dist > threshold * 2.0:
-                severity = "high"
-            elif normalized_dist > threshold * 1.5:
-                severity = "medium"
-            else:
-                severity = "low"
-
+        distance = float(np.linalg.norm(sig.rel[i, off_wrist] - sig.rel[i, NOSE]))
+        if distance > threshold:
             errors.append(
                 ErrorDetection(
                     frame_number=strike.frame_number,
                     timestamp_ms=strike.timestamp_ms,
                     error_type="dropped_guard",
-                    severity=severity,
+                    severity=severity_band(distance, threshold, 1.5, 2.0),
                     details={
                         "off_hand": "right" if strike.hand == "left" else "left",
-                        "normalized_distance": round(normalized_dist, 3),
+                        "distance_sw": round(distance, 3),
                         "threshold": threshold,
                     },
                     related_strike_index=strike_idx,
+                    measured_value_sw=round(distance, 3),
                 )
             )
     return errors
@@ -108,19 +102,12 @@ def detect_telegraph(
         cov = std_x / abs(mean_x)
 
         if cov > threshold:
-            if cov > threshold * 2.5:
-                severity = "high"
-            elif cov > threshold * 1.5:
-                severity = "medium"
-            else:
-                severity = "low"
-
             errors.append(
                 ErrorDetection(
                     frame_number=strike.frame_number,
                     timestamp_ms=strike.timestamp_ms,
                     error_type="chicken_wing",
-                    severity=severity,
+                    severity=severity_band(cov, threshold, 1.5, 2.5),
                     details={
                         "hand": strike.hand,
                         "elbow_x_variance": round(cov, 4),

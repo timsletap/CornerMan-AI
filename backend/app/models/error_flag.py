@@ -2,7 +2,7 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, func
+from sqlalchemy import Boolean, DateTime, Enum, Float, ForeignKey, Integer, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -40,6 +40,8 @@ class ErrorFlag(Base):
     frame_number: Mapped[int] = mapped_column(Integer)
     severity: Mapped[Severity] = mapped_column(Enum(Severity), default=Severity.MEDIUM)
     details: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    # The measurement behind the flag, in shoulder widths (VIS-11)
+    measured_value_sw: Mapped[float | None] = mapped_column(Float, nullable=True)
     user_disputed: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 

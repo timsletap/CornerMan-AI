@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from app.vision.signals import compute_angle, frame_at, wrist_velocities
+from app.vision.signals import Signals, compute_angle, keypoint_velocity
 from app.vision.types import (
     COCO_KEYPOINTS,
     LEFT_ELBOW,
@@ -31,27 +31,33 @@ DEBOUNCE_SECONDS = 0.3
 
 
 def detect_strikes(
+    sig: Signals,
     frames: Sequence[FrameKeypoints],
     active_frames: set[int],
     meta: VideoMeta,
     cfg: VisionConfig,
 ) -> list[StrikeDetection]:
-    """VIS-02: local wrist-velocity maxima above the threshold, debounced, classified."""
+    """VIS-02: local wrist-speed maxima above the threshold, debounced, classified.
+
+    Wrist speed is relative to the shoulder midpoint in sw/s (VIS-11), so walking or a
+    moving camera does not count as punching. ``frames`` are the smoothed frames that
+    ``sig`` was built from (same order).
+    """
     strikes: list[StrikeDetection] = []
-    if len(frames) < 3:
+    n = len(sig)
+    if n < 3:
         return strikes
 
+    threshold = cfg.strike_velocity_threshold
+    min_gap_frames = int(meta.fps * DEBOUNCE_SECONDS)
     for hand_idx, hand_name in [(LEFT_WRIST, "left"), (RIGHT_WRIST, "right")]:
-        velocities = wrist_velocities(frames, active_frames, hand_idx, meta)
-
-        threshold = cfg.strike_velocity_threshold
-        min_gap_frames = int(meta.fps * DEBOUNCE_SECONDS)
+        speed, vector = keypoint_velocity(sig, hand_idx, cfg, active_frames)
         last_strike_frame = -min_gap_frames
 
-        for i in range(1, len(velocities) - 1):
-            mag = velocities[i][0]
-            if mag > threshold and mag >= velocities[i - 1][0] and mag >= velocities[i + 1][0]:
-                fk = frames[i + 1]
+        for i in range(2, n - 1):
+            mag = float(speed[i])
+            if mag > threshold and mag >= speed[i - 1] and mag >= speed[i + 1]:
+                fk = frames[i]
                 if fk.frame_number - last_strike_frame < min_gap_frames:
                     continue
 
@@ -63,27 +69,29 @@ def detect_strikes(
                     }
                     for k in range(NUM_KEYPOINTS)
                 }
+                px_per_sw = float(sig.scale[i])
                 strikes.append(
                     StrikeDetection(
                         frame_number=fk.frame_number,
                         timestamp_ms=fk.timestamp_ms,
                         hand=hand_name,
                         velocity=mag,
-                        velocity_vector=(velocities[i][1], velocities[i][2]),
+                        velocity_vector=(
+                            float(vector[i, 0]) * px_per_sw,
+                            float(vector[i, 1]) * px_per_sw,
+                        ),
                         wrist_position=(fk.keypoints[hand_idx][0], fk.keypoints[hand_idx][1]),
                         keypoints_snapshot=snapshot,
+                        index=i,
                     )
                 )
                 last_strike_frame = fk.frame_number
 
     strikes.sort(key=lambda s: s.frame_number)
-
     for strike in strikes:
-        at = frame_at(frames, strike.frame_number, cfg)
-        if at:
-            strike.strike_type = classify_strike(at, strike.hand, strike.velocity_vector, meta)
-        else:
-            strike.strike_type = "other"
+        strike.strike_type = classify_strike(
+            frames[strike.index], strike.hand, strike.velocity_vector, meta
+        )
     return strikes
 
 

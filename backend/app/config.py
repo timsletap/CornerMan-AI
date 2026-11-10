@@ -40,17 +40,18 @@ class Settings(BaseSettings):
     ANTHROPIC_PRICE_OUTPUT_PER_MTOK: float = 20.00
 
     # Vision Engine Thresholds
-    STRIKE_VELOCITY_THRESHOLD: float = 15.0
-    GUARD_DISTANCE_THRESHOLD: float = 0.35
+    # Body-relative units (VIS-11): sw = shoulder widths. Not yet tuned on labeled dev clips.
+    STRIKE_VELOCITY_THRESHOLD: float = 6.0  # sw/s, wrist speed relative to the shoulders
+    GUARD_DISTANCE_THRESHOLD: float = 0.6  # sw, off-hand wrist to nose
     TELEGRAPH_VARIANCE_THRESHOLD: float = 0.10
     OCCLUSION_CONFIDENCE_THRESHOLD: float = 0.7
     OCCLUSION_PAUSE_SECONDS: float = 0.5
     YOLO_MODEL_NAME: str = "yolov8m-pose.pt"
     VISION_FRAME_SKIP: int = 1
-    # Keypoint smoothing, One Euro filter (VIS-10). Positions are filtered in frame
-    # heights, so BETA is per (frame height / s). Not yet tuned on labeled dev clips.
+    # Keypoint smoothing, One Euro filter (VIS-10). Positions are filtered in shoulder
+    # widths, so BETA is per (sw/s). Not yet tuned on labeled dev clips.
     ONE_EURO_MIN_CUTOFF: float = 1.0  # Hz; lower = smoother when still
-    ONE_EURO_BETA: float = 5.0  # higher = less lag when moving fast
+    ONE_EURO_BETA: float = 0.4  # higher = less lag when moving fast
     ONE_EURO_D_CUTOFF: float = 1.0  # Hz; smoothing of the speed estimate
     # Identity tracking (VIS-09)
     TRACKER_CONFIG: str = "bytetrack.yaml"

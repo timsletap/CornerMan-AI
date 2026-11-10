@@ -1,8 +1,8 @@
 """Shared types and constants for the vision stages.
 
 Units: pixel coordinates in the source frame (origin top-left, y down), times in ms
-from video start, frame numbers from 0. Velocities are in frame heights per second
-("u/s") until VIS-11 moves them to shoulder widths per second.
+from video start, frame numbers from 0. Body-relative distances are in shoulder widths
+("sw") and velocities in sw/s (VIS-11).
 """
 
 from __future__ import annotations
@@ -66,10 +66,14 @@ class StrikeDetection:
     timestamp_ms: int
     hand: str
     velocity: float
+    """Peak wrist speed relative to the shoulder midpoint, sw/s."""
     velocity_vector: tuple[float, float]
+    """Direction of that motion as (dx, dy) in pixels/s, y down (for drawing)."""
     wrist_position: tuple[float, float]
     strike_type: str = ""
     keypoints_snapshot: dict[str, Any] = field(default_factory=dict)
+    index: int = -1
+    """Position of the strike frame in the analyzed frame sequence."""
 
 
 @dataclass
@@ -80,6 +84,8 @@ class ErrorDetection:
     severity: str
     details: dict[str, Any]
     related_strike_index: int | None = None
+    measured_value_sw: float | None = None
+    """The measurement behind the flag, in shoulder widths."""
 
 
 @dataclass(frozen=True)
@@ -99,7 +105,9 @@ class VisionConfig:
     occlusion_confidence: float
     occlusion_pause_s: float
     strike_velocity_threshold: float
+    """sw/s."""
     guard_distance_threshold: float
+    """sw."""
     telegraph_variance_threshold: float
     tracker_config: str = "bytetrack.yaml"
     target_select_s: float = 2.0
@@ -109,8 +117,8 @@ class VisionConfig:
     """Seconds after losing the target during which a new id is matched by bbox IoU."""
     one_euro_min_cutoff: float = 1.0
     """Hz."""
-    one_euro_beta: float = 5.0
-    """Cutoff gain per unit of speed (frame heights per second)."""
+    one_euro_beta: float = 0.4
+    """Cutoff gain in Hz per sw/s of keypoint speed."""
     one_euro_d_cutoff: float = 1.0
     """Hz."""
 
