@@ -2,6 +2,7 @@
 
 Usage (from the repo root):
     python -m eval.run --split dev|test|fixtures [--window-ms 150] [--from-cache] [--out FILE]
+    python -m eval.run --split dir --labels-dir DIR [--clips-dir DIR] [--name NAME]
 
 For each clip in the split the harness loads ``eval/labels/<clip_id>.json``, gets poses
 (from ``eval/clips/<clip_id>_poses.parquet`` when it is valid, else by running the pose
@@ -284,7 +285,14 @@ def write_report(report: Report, path: Path) -> None:
 
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m eval.run", description=__doc__)
-    parser.add_argument("--split", choices=["dev", "test", "fixtures"], required=True)
+    parser.add_argument("--split", choices=["dev", "test", "fixtures", "dir"], required=True)
+    parser.add_argument(
+        "--labels-dir", type=Path, default=None, help="with --split dir: every *.json here"
+    )
+    parser.add_argument(
+        "--clips-dir", type=Path, default=None, help="with --split dir: videos and pose caches"
+    )
+    parser.add_argument("--name", default=None, help="split name written in the report")
     parser.add_argument("--window-ms", type=int, default=DEFAULT_WINDOW_MS)
     parser.add_argument("--from-cache", action="store_true", help="never run the pose model")
     parser.add_argument("--splits", type=Path, default=SPLITS)
@@ -293,16 +301,24 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     cfg = VisionConfig.from_settings()
     try:
-        clip_ids, labels_dir, clips_dir = split_clips(args.split, args.splits)
+        if args.split == "dir":
+            if args.labels_dir is None:
+                raise EvalError("--split dir needs --labels-dir")
+            labels_dir = args.labels_dir
+            clips_dir = args.clips_dir or labels_dir
+            clip_ids = sorted(p.stem for p in labels_dir.glob("*.json"))
+        else:
+            clip_ids, labels_dir, clips_dir = split_clips(args.split, args.splits)
+        name = args.name or args.split
         report, _ = evaluate(
-            args.split, clip_ids, labels_dir, clips_dir, cfg, args.window_ms, args.from_cache
+            name, clip_ids, labels_dir, clips_dir, cfg, args.window_ms, args.from_cache
         )
     except EvalError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
 
     print(format_report(report))
-    out = args.out or REPORTS_DIR / f"{report.git_sha}_{args.split}.json"
+    out = args.out or REPORTS_DIR / f"{report.git_sha}_{name}.json"
     write_report(report, out)
     print(f"\nwrote {out}")
     return 0

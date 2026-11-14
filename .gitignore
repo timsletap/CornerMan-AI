@@ -32,3 +32,4 @@ coverage.xml
 
 # Browser automation output (screenshots, snapshots)
 .playwright-mcp/
+data/

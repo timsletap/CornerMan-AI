@@ -1,0 +1,254 @@
+{
+  "clips": {
+    "clip": {
+      "rtmpose-m": {
+        "both_wrists_confident_share": 0.743421052631579,
+        "fps": 17.568146837939064,
+        "frames": 152.0,
+        "mean_wrist_confidence": 0.7094502804898902,
+        "p95_ms": 66.69391007162629,
+        "person_found_share": 1.0,
+        "still_frames": 0.0,
+        "wrist_jitter_sw": NaN
+      },
+      "rtmw-l": {
+        "both_wrists_confident_share": 0.8552631578947368,
+        "fps": 11.959033130453637,
+        "frames": 152.0,
+        "mean_wrist_confidence": 0.7647385569779497,
+        "p95_ms": 94.10617997637019,
+        "person_found_share": 1.0,
+        "still_frames": 0.0,
+        "wrist_jitter_sw": NaN
+      },
+      "rtmw-x": {
+        "both_wrists_confident_share": 1.0,
+        "fps": 11.412750094120696,
+        "frames": 152.0,
+        "mean_wrist_confidence": 4.610708286887721,
+        "p95_ms": 96.60254995105788,
+        "person_found_share": 1.0,
+        "still_frames": 0.0,
+        "wrist_jitter_sw": NaN
+      },
+      "yolov8m-pose": {
+        "both_wrists_confident_share": 0.625,
+        "fps": 4.699279037302196,
+        "frames": 152.0,
+        "mean_wrist_confidence": 0.7951665715326702,
+        "p95_ms": 223.01176004111767,
+        "person_found_share": 1.0,
+        "still_frames": 0.0,
+        "wrist_jitter_sw": NaN
+      }
+    },
+    "wikimedia_boxer_pekka_kokkonen_training_9a4c6665": {
+      "rtmpose-m": {
+        "both_wrists_confident_share": 0.19555555555555557,
+        "fps": 23.673681974324708,
+        "frames": 450.0,
+        "mean_wrist_confidence": 0.5157967148390081,
+        "p95_ms": 49.53566000331193,
+        "person_found_share": 1.0,
+        "still_frames": 0.0,
+        "wrist_jitter_sw": NaN
+      },
+      "rtmw-l": {
+        "both_wrists_confident_share": 0.4311111111111111,
+        "fps": 16.445475050711032,
+        "frames": 450.0,
+        "mean_wrist_confidence": 0.5873153043289979,
+        "p95_ms": 74.17738002259283,
+        "person_found_share": 1.0,
+        "still_frames": 0.0,
+        "wrist_jitter_sw": NaN
+      },
+      "rtmw-x": {
+        "both_wrists_confident_share": 1.0,
+        "fps": 15.397478201893898,
+        "frames": 450.0,
+        "mean_wrist_confidence": 3.3879249245590635,
+        "p95_ms": 85.9550999244675,
+        "person_found_share": 1.0,
+        "still_frames": 4.0,
+        "wrist_jitter_sw": 0.08568766951727916
+      },
+      "yolov8m-pose": {
+        "both_wrists_confident_share": 0.5977777777777777,
+        "fps": 4.668438184151,
+        "frames": 450.0,
+        "mean_wrist_confidence": 0.7543413862606717,
+        "p95_ms": 225.3990599652752,
+        "person_found_share": 1.0,
+        "still_frames": 89.0,
+        "wrist_jitter_sw": 0.028083473798093065
+      }
+    },
+    "wikimedia_boxing_match_yrj_piitulainen_vs_jean_wan_54e247af": {
+      "rtmpose-m": {
+        "both_wrists_confident_share": 0.09777777777777778,
+        "fps": 17.391969786188966,
+        "frames": 450.0,
+        "mean_wrist_confidence": 0.3396673935196466,
+        "p95_ms": 78.06902003940193,
+        "person_found_share": 1.0,
+        "still_frames": 14.0,
+        "wrist_jitter_sw": 0.12373249035775548
+      },
+      "rtmw-l": {
+        "both_wrists_confident_share": 0.19777777777777777,
+        "fps": 12.148572178188287,
+        "frames": 450.0,
+        "mean_wrist_confidence": 0.419428555170695,
+        "p95_ms": 117.30554001405832,
+        "person_found_share": 1.0,
+        "still_frames": 18.0,
+        "wrist_jitter_sw": 0.19486705283512887
+      },
+      "rtmw-x": {
+        "both_wrists_confident_share": 0.9933333333333333,
+        "fps": 11.561976817995355,
+        "frames": 450.0,
+        "mean_wrist_confidence": 2.4608534464902347,
+        "p95_ms": 126.83035996742548,
+        "person_found_share": 1.0,
+        "still_frames": 30.0,
+        "wrist_jitter_sw": 0.16569824375575662
+      },
+      "yolov8m-pose": {
+        "both_wrists_confident_share": 0.21777777777777776,
+        "fps": 5.069950101212468,
+        "frames": 450.0,
+        "mean_wrist_confidence": 0.40303975425143207,
+        "p95_ms": 207.05370001960543,
+        "person_found_share": 1.0,
+        "still_frames": 15.0,
+        "wrist_jitter_sw": 0.0
+      }
+    },
+    "wikimedia_day_of_the_town_2017_09_09_kickboxing_00_91d03884": {
+      "rtmpose-m": {
+        "both_wrists_confident_share": 0.09230769230769231,
+        "fps": 9.74389629918034,
+        "frames": 325.0,
+        "mean_wrist_confidence": 0.3832290389245519,
+        "p95_ms": 206.4382200012915,
+        "person_found_share": 1.0,
+        "still_frames": 4.0,
+        "wrist_jitter_sw": 0.05594070735176752
+      },
+      "rtmw-l": {
+        "both_wrists_confident_share": 0.13538461538461538,
+        "fps": 5.4375486662333135,
+        "frames": 325.0,
+        "mean_wrist_confidence": 0.44776328657682124,
+        "p95_ms": 407.74825999396853,
+        "person_found_share": 1.0,
+        "still_frames": 5.0,
+        "wrist_jitter_sw": 0.07939862120507266
+      },
+      "rtmw-x": {
+        "both_wrists_confident_share": 1.0,
+        "fps": 4.569321983207846,
+        "frames": 325.0,
+        "mean_wrist_confidence": 2.993113377369367,
+        "p95_ms": 463.34702505846514,
+        "person_found_share": 1.0,
+        "still_frames": 7.0,
+        "wrist_jitter_sw": 0.0783167800522861
+      },
+      "yolov8m-pose": {
+        "both_wrists_confident_share": 0.24,
+        "fps": 4.690658131371656,
+        "frames": 325.0,
+        "mean_wrist_confidence": 0.5148457912844606,
+        "p95_ms": 223.80801501567475,
+        "person_found_share": 0.9846153846153847,
+        "still_frames": 24.0,
+        "wrist_jitter_sw": 0.0
+      }
+    },
+    "wikimedia_muay_thai_in_lamai_e46cea44": {
+      "rtmpose-m": {
+        "both_wrists_confident_share": 0.0,
+        "fps": 11.72925592345077,
+        "frames": 450.0,
+        "mean_wrist_confidence": 0.1813511218254765,
+        "p95_ms": 101.54979990329592,
+        "person_found_share": 1.0,
+        "still_frames": 117.0,
+        "wrist_jitter_sw": 0.03656791568447709
+      },
+      "rtmw-l": {
+        "both_wrists_confident_share": 0.03333333333333333,
+        "fps": 7.198242479152581,
+        "frames": 450.0,
+        "mean_wrist_confidence": 0.3223207559602128,
+        "p95_ms": 170.51249996293333,
+        "person_found_share": 1.0,
+        "still_frames": 94.0,
+        "wrist_jitter_sw": 0.05158406618517674
+      },
+      "rtmw-x": {
+        "both_wrists_confident_share": 1.0,
+        "fps": 6.335890919385613,
+        "frames": 450.0,
+        "mean_wrist_confidence": 2.075196186436547,
+        "p95_ms": 196.92509996239096,
+        "person_found_share": 1.0,
+        "still_frames": 68.0,
+        "wrist_jitter_sw": 0.022882242277483564
+      },
+      "yolov8m-pose": {
+        "both_wrists_confident_share": 0.0,
+        "fps": 4.699411538817033,
+        "frames": 450.0,
+        "mean_wrist_confidence": 0.017587920937803574,
+        "p95_ms": 224.3105800822377,
+        "person_found_share": 1.0,
+        "still_frames": 17.0,
+        "wrist_jitter_sw": 0.0
+      }
+    }
+  },
+  "devices": {
+    "rtmpose-m": "cuda",
+    "rtmw-l": "cuda",
+    "rtmw-x": "cuda",
+    "yolov8m-pose": "cpu"
+  },
+  "summary": {
+    "rtmpose-m": {
+      "both_wrists_confident_share": 0.22581241565452093,
+      "fps": 16.02139016421677,
+      "mean_wrist_confidence": 0.42589890991971463,
+      "p95_ms": 100.45732200378552,
+      "person_found_share": 1.0,
+      "wrist_jitter_sw": 0.07208037113133337
+    },
+    "rtmw-l": {
+      "both_wrists_confident_share": 0.33057399910031493,
+      "fps": 10.63777430094777,
+      "mean_wrist_confidence": 0.5083132918029353,
+      "p95_ms": 172.76997199398465,
+      "person_found_share": 1.0,
+      "wrist_jitter_sw": 0.10861658007512609
+    },
+    "rtmw-x": {
+      "both_wrists_confident_share": 0.9986666666666666,
+      "fps": 9.85548360332068,
+      "mean_wrist_confidence": 3.105559244348587,
+      "p95_ms": 193.93202697276138,
+      "person_found_share": 1.0,
+      "wrist_jitter_sw": 0.08814623390070137
+    },
+    "yolov8m-pose": {
+      "both_wrists_confident_share": 0.33611111111111114,
+      "fps": 4.765547398570871,
+      "mean_wrist_confidence": 0.49699628485340763,
+      "p95_ms": 220.71662302478217,
+      "person_found_share": 0.9969230769230769,
+      "wrist_jitter_sw": 0.007020868449523266
+    }
+  }
+}

@@ -41,6 +41,7 @@ Part II: From project to product
 22. Owner decisions for Part II
 23. Instructions for the agent taking over
 24. Glossary additions
+25. Vision v3: the model stack and the two-fighter engine (license gate, target stack, event log; replaces the order of M10)
 
 ---
 
@@ -1871,6 +1872,9 @@ Task format is the same as Part I. "[needs labels]" means the task cannot be acc
 ---
 
 ### M10: Vision depth
+
+**Order and model choices for this milestone are set by Section 25**, which was written after the license and measurement checks of 2026-11-13. The task definitions below still apply.
+
 Every task here follows the Part I vision rules: eval delta in the PR, dev split only, explainable baseline first, learned models must beat it on the same split. All are **[needs labels]**; new event types need new label classes first (extend `eval/schema.py` and `LABELING.md` in the same task).
 
 #### VIS-15: Camera angle and footage quality guardrail (from Section 8.1)
@@ -2304,6 +2308,7 @@ Rules: a test run with skipped database tests does not count as green. Flaky tes
 - [ ] Minimum age and whether to build a guardian-consent flow for under-18 fighters
 - [ ] Final Terms, Privacy Policy, and biometric-data notices (a lawyer should review)
 - [ ] Whether `yt-dlp` import stays in production (copyright and terms-of-service exposure)
+- [ ] The model and dataset license questions in Section 25.6 (the pose model the app runs today is AGPL)
 - [ ] Data residency: one region or EU and US separately
 - [ ] Brand: product name check (trademark), domain, logo
 - [ ] Reference phones for MOB-04 numbers
@@ -2347,3 +2352,104 @@ Rules: a test run with skipped database tests does not count as green. Flaky tes
 | RPO / RTO | How much data may be lost / how long recovery may take |
 | Shadow mode | A new model runs on real jobs but its results are not shown |
 | Study session | Analysis of someone else's footage, kept out of the user's own stats |
+
+---
+
+## 25. Vision v3: the model stack and the two-fighter engine
+
+This section replaces the order of M10 (Section 18) and supersedes Part I wherever they disagree about models. It adopts the owner's 16-step build plan of 2026-11-13, with the changes that license and measurement checks forced. The reasoning and the evidence are in `docs/adr/0001-vision-model-stack.md`.
+
+### 25.1 Rule: a model or dataset must pass the license gate before it is used
+
+| Use | Allowed |
+|---|---|
+| Ships in the product (runs on user footage, or its weights do) | Permissive license only (Apache-2.0, MIT, BSD), or a commercial license the owner has bought |
+| Trains a shipped model | Data the owner has rights to: own footage with consent, opt-in user data (ML-04), or a dataset whose license allows commercial use |
+| Measures the product (local eval, never committed, never redistributed) | Research datasets are acceptable; record the license status in `docs/DATASETS.md` |
+
+Verified on 2026-11-13 from each project's own license file or README:
+
+| Component | License | Verdict |
+|---|---|---|
+| Ultralytics YOLO (v8 in use today, v11, YOLO26) | AGPL-3.0, or a paid Enterprise License | **Cannot ship in a closed product without the Enterprise License.** This applies to the model the app runs today. Owner decision: buy the license or migrate (default: migrate, VIS-26) |
+| GVHMR (world-grounded 3D human motion) | Zhejiang University license: "educational, research and non-profit purposes only" | **Rejected for the product.** Its body model (SMPL) is also non-commercial. Research comparison only |
+| RTMW / RTMPose / RTMW3D (OpenMMLab), run through `rtmlib` | Apache-2.0 code. Weights trained on a mix of public datasets, some of which carry their own terms | **Default pose stack.** The weight-provenance question goes to the lawyer with LNCH-07 |
+| YOLOX person detector (bundled with `rtmlib`) | Apache-2.0 | Default detector |
+| RF-DETR (Nano, Small, Medium, Large) | Apache-2.0 | Alternative detector to test against YOLOX in VIS-26 |
+| ByteTrack | MIT | Keep, but through a non-Ultralytics implementation (VIS-26) |
+| SAM 3 | Meta's SAM License: royalty-free, custom terms, checkpoints behind an access request, 848M parameters | Allowed as an optional re-identification fallback after legal review; not on the critical path |
+| MMAction2 (CTR-GCN, PoseC3D) | Apache-2.0 | Allowed for VIS-16 and VIS-18 |
+| BoxingVI dataset | **No license stated.** Annotations and YouTube links only (ten videos published, not twenty) | Local measurement only. Not for training a shipped model unless the authors grant it (owner to email them) |
+| Olympic Boxing Punch Classification dataset (Stefański et al.) | Derivative copy says non-commercial, academic only; original Kaggle terms not yet read | Local measurement of landed, missed, blocked only. Not for training a shipped contact model |
+
+### 25.2 Target stack
+
+| Stage | Today | Target | Why |
+|---|---|---|---|
+| Person detection | YOLOv8m-pose (one model does both) | YOLOX-m or RF-DETR-M | License; a separate detector lets the pose model be swapped freely |
+| 2D pose | YOLOv8m-pose, 17 keypoints | RTMW-l or RTMW-x, 133 keypoints (hands and feet included) | License; hand keypoints for glove position, foot keypoints for stance and footwork |
+| 3D pose | none | RTMW3D-x as the first candidate; a lifting model (MotionBERT) as the second | Body-relative 3D fixes camera-angle dependence. Both are permissive. Ship only where it beats 2D on the eval set |
+| Tracking | ByteTrack inside Ultralytics | ByteTrack (standalone) on detector boxes, plus the existing re-acquisition logic | License; same algorithm |
+| Re-identification | box overlap only | appearance embedding from the fighter crop; SAM 3 masks as a later option | Clinches and crossings |
+| Strike detection | peak-speed rules | rules on 3D signals, then a learned skeleton model (VIS-16, VIS-18) once it beats the rules | Explainable baseline first |
+| Contact (landed, missed, blocked) | none | geometric features plus a small classifier (VIS-24) | Needs two-fighter footage with outcome labels the owner has rights to |
+| Coaching | Claude, grounded | unchanged | |
+
+Nothing in the target column is adopted on argument alone. Each swap is one PR with the eval delta on the BoxingVI baseline (Section 25.4) and, once it exists, the owner's labeled set.
+
+### 25.3 The event log
+One record per strike is the contract between the vision engine and everything downstream (stats, coaching, coach chat, progress). It extends today's `strike_events` items; existing fields keep their names.
+
+```python
+class StrikeRecord(BaseModel):
+    index: int
+    fighter: Literal["A", "B"]          # stable for the whole video (VIS-17)
+    track_id: int
+    start_ms: int                        # motion onset
+    peak_ms: int                         # full extension; today's timestamp_ms
+    end_ms: int                          # hand back at guard, or next onset
+    limb: Literal["left_hand", "right_hand", "left_leg", "right_leg"]
+    hand_role: Literal["lead", "rear"] | None
+    strike_type: str                     # jab, cross, hook, uppercut, body_shot, later kicks
+    target: Literal["head", "body", "leg"] | None
+    outcome: Literal["landed", "missed", "blocked"] | None   # None until VIS-24 ships
+    velocity: float                      # sw/s at peak
+    confidence: float                    # calibrated (CAL-01)
+    outcome_confidence: float | None
+    abstained: bool
+    round_index: int | None
+    engine_version: str
+```
+
+Rules: stats and coaching read only this log, never raw keypoints. A field the engine cannot measure is `None`, never a guess. Grounding paths (`strike_events.3`) keep working because the list order is the record order.
+
+### 25.4 What was measured on 2026-11-13
+See the ADR for the tables. In short:
+- **A first real baseline exists.** The current pipeline was scored on three-minute excerpts of the ten BoxingVI videos (1,288 annotated punches) with `python -m eval.public_sets.boxingvi` and `python -m eval.run --split dir`. The report is local (`data/`), not committed, because the dataset has no license.
+- **The pose comparison is inconclusive without labels.** `perf/pose_compare.py` measures speed, wrist confidence, and still-body jitter. It cannot say which model finds punches better; the BoxingVI baseline can, once VIS-26 gives RTMW a path through the pipeline.
+
+### 25.5 Tasks (replaces the order of M10)
+
+| Order | Task | What | Done when |
+|---|---|---|---|
+| 1 | DATA-02 | Public eval sets wired in: BoxingVI converter (done), stance checked per video by the owner, full-length run, `docs/DATASETS.md` with license status per source | Baseline report regenerated with confirmed stances; hand agreement reported |
+| 2 | VIS-26 | Pose backend interface in `vision/pose.py` (`ultralytics`, `rtmlib`); standalone ByteTrack; RTMW-l and RTMW-x through the pipeline; 133 keypoints cached, first 17 used by existing rules | Eval delta table for each backend on BoxingVI; the default is switched only if detection F1 holds; no Ultralytics import on the default path |
+| 3 | VIS-27 | Event log (Section 25.3): `start_ms`, `end_ms`, `limb`, `fighter`, `engine_version` added; stats computed only from the log | Golden test updated; API additive only |
+| 4 | VIS-17 | Two fighters with stable A and B identities; appearance re-identification after crossings | Identity switches per clip reported on sparring footage |
+| 5 | VIS-23 | 3D signals (RTMW3D first); strike rules ported to body-relative 3D; guard and telegraph rebuilt in 3D | 2D versus 3D table per camera angle; ship only where it wins |
+| 6 | VIS-16, VIS-18 | Learned strike detector on skeleton windows, trained only on data that passes Section 25.1 | Beats the rules on the same split, or the negative result is committed |
+| 7 | VIS-24 | Contact model: distance at peak, opponent head acceleration, facing, glove and head overlap | Precision at least 0.85 before it leaves the flag |
+| 8 | CAL-01 | Temperature scaling per model; abstain below threshold | ECE before and after |
+| 9 | VIS-19 | Stats engine per round from the event log: landed versus attempted, head, body, leg, pace over real clip duration, guard percentage | Every stat traceable to event indices |
+| 10 | PERF-01 | ONNX and TensorRT export for the chosen models, batched GPU inference | Table in `docs/PERFORMANCE.md` |
+| 11 | DATA-00, ML-01 | Own two-fighter footage, labeled with model pre-fill; fine-tune steps 5 to 7 | Owner's eval set replaces BoxingVI as the gate |
+| 12 | VIS-21 | Kicks and knees | Per-class precision and recall |
+
+Step 16 of the owner's plan (collect own data) is listed late here only because it is the owner's work; start it now in parallel. It is the only source of data that can both train and ship.
+
+### 25.6 Owner decisions added by this section
+- [ ] Ultralytics: buy the Enterprise License, or migrate to the permissive stack (default: migrate)
+- [ ] Email the BoxingVI authors to ask for a license that allows training
+- [ ] Read the original Kaggle terms of the Olympic dataset before any use beyond local measurement
+- [ ] Confirm the stance of the boxer in each of the ten BoxingVI videos (ten minutes of the owner's time; it unlocks hand-agreement numbers)
+- [ ] Whether SAM 3's terms are acceptable (lawyer, with LNCH-07)
