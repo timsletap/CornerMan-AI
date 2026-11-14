@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 from typing import Self
 
 from pydantic import model_validator
@@ -6,6 +7,7 @@ from pydantic_settings import BaseSettings
 
 DEFAULT_SECRET_KEY = "change-me-to-a-random-secret-key"
 MIN_SECRET_KEY_BYTES = 32
+PROMPTS_DIR = Path(__file__).parent / "coaching" / "prompts"
 
 
 class Settings(BaseSettings):
@@ -75,6 +77,15 @@ class Settings(BaseSettings):
     MAX_VIDEO_DURATION_SECONDS: int = 1800
     MAX_VIDEO_SIZE_MB: int = 500
     API_CREDIT_HOURLY_LIMIT: float = 1.00
+
+    @model_validator(mode="after")
+    def _prompt_exists(self) -> Self:
+        if not (PROMPTS_DIR / f"{self.PROMPT_VERSION}.md").is_file():
+            available = sorted(p.stem for p in PROMPTS_DIR.glob("*.md"))
+            raise ValueError(
+                f"PROMPT_VERSION {self.PROMPT_VERSION!r} has no prompt file; available: {available}"
+            )
+        return self
 
     @model_validator(mode="after")
     def _fail_safe_in_production(self) -> Self:

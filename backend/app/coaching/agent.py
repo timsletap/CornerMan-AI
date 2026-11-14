@@ -16,7 +16,6 @@ import json
 import logging
 from collections.abc import Mapping, Sequence
 from functools import cache
-from pathlib import Path
 from typing import Any
 
 import anthropic
@@ -33,11 +32,9 @@ from app.coaching.schema import (
     ReportSubmission,
     submission_schema,
 )
-from app.config import settings
+from app.config import PROMPTS_DIR, settings
 
 logger = logging.getLogger(__name__)
-
-PROMPTS_DIR = Path(__file__).parent / "prompts"
 
 FALLBACK_MODEL = "fallback"
 MAX_ATTEMPTS = 2

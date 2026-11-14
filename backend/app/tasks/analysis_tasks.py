@@ -207,6 +207,8 @@ def run_analysis_pipeline(self, session_id: str, video_id: str) -> dict:
         # 7. Persist coach feedback
         session.coaching_report = coaching_response
         session.coach_feedback = json.dumps(coaching_response)
+        session.prompt_version = coaching_response.get("prompt_version")
+        session.llm_model = coaching_response.get("model")
 
         # 8. Recommend the prescribed drill first, then the standard one for that error
         update_progress(session_id, "drills", 0.96, "Mapping drill recommendations...")

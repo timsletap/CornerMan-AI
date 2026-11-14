@@ -38,3 +38,8 @@ def test_production_with_32_byte_secret_and_debug_off_passes() -> None:
 def test_development_with_default_secret_passes() -> None:
     s = make_settings(APP_ENV="development", SECRET_KEY=DEFAULT_SECRET_KEY, DEBUG=True)
     assert s.SECRET_KEY == DEFAULT_SECRET_KEY
+
+
+def test_unknown_prompt_version_raises() -> None:
+    with pytest.raises(ValidationError, match="PROMPT_VERSION 'v999' has no prompt file"):
+        make_settings(PROMPT_VERSION="v999")

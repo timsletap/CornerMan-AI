@@ -195,6 +195,7 @@ def test_over_hourly_spend_uses_fallback_but_keeps_vision_results(
     assert report["note"] == analysis_tasks.SPEND_CAP_NOTE
     assert report["model"] == "fallback"
     assert saved.coaching_report == report
+    assert (saved.prompt_version, saved.llm_model) == (settings.PROMPT_VERSION, "fallback")
     assert "Detected 1 strikes" in report["summary"]
     assert db.query(LlmSpend).count() == 1  # the fallback costs nothing
 
@@ -217,3 +218,34 @@ def test_under_hourly_spend_calls_llm_and_records_cost(
     assert (spend.input_tokens, spend.output_tokens) == (1000, 500)
     assert spend.cost_usd == pytest.approx(0.014)
     assert spend.model == settings.ANTHROPIC_MODEL
+
+
+def test_prompt_version_and_model_are_stored_with_each_report(
+    db: Session,
+    make_user: MakeUser,
+    seed_video: SeedVideo,
+    pipeline: Callable[[AnalysisSession], MagicMock],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """AGT-11: changing PROMPT_VERSION changes the version stored on new reports."""
+    from app.services import coaching
+
+    # The real coaching service, without an API key: the basic report, no network.
+    monkeypatch.setattr(
+        analysis_tasks, "generate_coaching_feedback", coaching.generate_coaching_feedback
+    )
+    monkeypatch.setattr(settings, "ANTHROPIC_API_KEY", "")
+    user, _ = make_user()
+    stored = []
+    for version in ("v1", "v2"):
+        monkeypatch.setattr(settings, "PROMPT_VERSION", version)
+        session = _queued_session(db, user, seed_video)
+        sid = session.id
+        pipeline(session)
+        db.expire_all()
+        saved = db.get(AnalysisSession, sid)
+        assert saved is not None and saved.coaching_report is not None
+        assert saved.coaching_report["prompt_version"] == version
+        stored.append((saved.prompt_version, saved.llm_model))
+
+    assert stored == [("v1", "fallback"), ("v2", "fallback")]

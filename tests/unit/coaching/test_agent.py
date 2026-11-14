@@ -1,5 +1,6 @@
 """AGT-05, AGT-06, AGT-08, AGT-09: the coaching agent with a mocked Anthropic client."""
 
+from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 from unittest.mock import MagicMock
@@ -322,3 +323,18 @@ def test_service_calls_the_model_and_returns_a_plain_dict(monkeypatch: pytest.Mo
     assert report["prescribed_drill"]["drill_id"] == "d-guard"
     assert report["usage"]["cost_usd"] == pytest.approx(0.06)
     assert CoachingReport.model_validate(report).model == "test-model"
+
+
+def test_prompt_version_selects_the_prompt_and_is_saved_on_the_report(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    (tmp_path / "v2.md").write_text("You are CornerMan, version two.", encoding="utf-8")
+    monkeypatch.setattr(agent, "PROMPTS_DIR", tmp_path)
+    monkeypatch.setattr(settings, "PROMPT_VERSION", "v2")
+    client = client_returning(reply(submission()))
+
+    report = run(client)
+
+    assert sent(client)["system"] == "You are CornerMan, version two."
+    assert report.prompt_version == "v2"
+    assert agent.fallback_report(VISION, DRILLS, "n").prompt_version == "v2"
