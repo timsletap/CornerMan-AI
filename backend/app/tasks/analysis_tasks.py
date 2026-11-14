@@ -13,6 +13,7 @@ from app.models.strike import Hand, HandRole, StrikeEvent, StrikeType
 from app.models.user import User
 from app.models.video import Video
 from app.services.coaching import fallback_report, generate_coaching_feedback
+from app.services.drill_mapping import get_drills_for_error
 from app.services.progress import clear_progress, update_progress
 from app.services.usage import check_llm_spend_quota, record_llm_spend
 from app.services.video import get_video_path
@@ -25,6 +26,8 @@ SPEND_CAP_NOTE = (
     "AI coaching is paused because the hourly usage budget was reached. "
     "This basic report is built from your vision metrics; try again within the hour."
 )
+
+MAX_DRILL_RECOMMENDATIONS = 2
 
 STRIKE_TYPE_MAP = {
     "jab": StrikeType.JAB,
@@ -67,7 +70,7 @@ def run_analysis_pipeline(self, session_id: str, video_id: str) -> dict:
     1. Update session status to PROCESSING
     2. Run vision pipeline (VIS-01 through VIS-07)
     3. Persist strike events and error flags
-    4. Run coaching agent (AGT-01 through AGT-04)
+    4. Run coaching agent (grounded CoachingReport, AGT-05 through AGT-08)
     5. Persist coach feedback and drill recommendations
     6. Update session status to COMPLETED
     """
@@ -179,33 +182,44 @@ def run_analysis_pipeline(self, session_id: str, video_id: str) -> dict:
             "weight_class": user.weight_class.value if user.weight_class else "unknown",
         }
 
+        # The report may only prescribe a drill that exists (AGT-05)
+        drills = db.query(Drill).order_by(Drill.error_type, Drill.name).all()
+        drill_options = [
+            {
+                "id": str(d.id),
+                "name": d.name,
+                "error_type": d.error_type,
+                "description": d.description,
+            }
+            for d in drills
+        ]
+
         if check_llm_spend_quota(db, user.id):
             logger.info("Generating coaching feedback for session %s", session_id)
-            coaching_response = generate_coaching_feedback(vision_json, user_profile)
+            coaching_response = generate_coaching_feedback(
+                vision_json, user_profile, drill_options, session_id
+            )
         else:
             # PLT-05: over the hourly spend cap. Vision results are still saved.
             logger.warning("Hourly LLM spend cap reached for user %s; using fallback", user.id)
-            coaching_response = fallback_report(vision_json, SPEND_CAP_NOTE)
+            coaching_response = fallback_report(vision_json, SPEND_CAP_NOTE, drill_options)
 
         # 7. Persist coach feedback
+        session.coaching_report = coaching_response
         session.coach_feedback = json.dumps(coaching_response)
 
-        # 8. Create DrillRecommendation rows from mapped_drills
+        # 8. Recommend the prescribed drill first, then the standard one for that error
         update_progress(session_id, "drills", 0.96, "Mapping drill recommendations...")
 
-        mapped_drills = coaching_response.get("mapped_drills", [])
-        for priority, drill_name in enumerate(mapped_drills):
-            drill = db.query(Drill).filter(Drill.name == drill_name).first()
-            if drill:
-                drill_rec = DrillRecommendation(
-                    session_id=sid,
-                    drill_id=drill.id,
-                    priority=priority,
-                )
-                db.add(drill_rec)
+        prescribed = coaching_response.get("prescribed_drill") or {}
+        mapped_names = get_drills_for_error(prescribed.get("error_type", "other"))
+        recommended = [d for d in drills if str(d.id) == prescribed.get("drill_id")]
+        recommended += [d for d in drills if d.name in mapped_names and d not in recommended]
+        for priority, drill in enumerate(recommended[:MAX_DRILL_RECOMMENDATIONS]):
+            db.add(DrillRecommendation(session_id=sid, drill_id=drill.id, priority=priority))
 
         # 9. Log the LLM call's actual cost against the hourly spend cap
-        record_llm_spend(db, user.id, sid, coaching_response.get("_usage", {}))
+        record_llm_spend(db, user.id, sid, coaching_response.get("usage", {}))
 
         # 10. Mark session as completed
         update_progress(session_id, "complete", 1.0, "Analysis complete!")

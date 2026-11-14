@@ -34,10 +34,14 @@ class Settings(BaseSettings):
     # Anthropic Claude
     ANTHROPIC_API_KEY: str = ""
     ANTHROPIC_MODEL: str = "claude-opus-5-5"
-    ANTHROPIC_MAX_TOKENS: int = 1500
+    # Output cap per call. The model's thinking counts against it, so leave headroom.
+    ANTHROPIC_MAX_TOKENS: int = 8000
     # USD per million tokens for ANTHROPIC_MODEL; update both when changing the model
     ANTHROPIC_PRICE_INPUT_PER_MTOK: float = 4.00
     ANTHROPIC_PRICE_OUTPUT_PER_MTOK: float = 20.00
+    PROMPT_VERSION: str = "v1"  # file in backend/app/coaching/prompts/
+    # Strikes and errors with a confidence below this are labeled "low" for the coach
+    COACHING_LOW_CONFIDENCE_THRESHOLD: float = 0.5
 
     # Vision Engine Thresholds
     # Body-relative units (VIS-11): sw = shoulder widths. Not yet tuned on labeled dev clips.

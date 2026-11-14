@@ -130,7 +130,9 @@ def key_metric_problem(
     if isinstance(value, bool) or not isinstance(value, int | float):
         return f"source_field {metric.source_field!r} is not a number"
     if abs(round(float(value), 1) - metric.value) > 1e-9:
-        return f"value {metric.value} does not match {metric.source_field} = {round(float(value), 1)}"
+        return (
+            f"value {metric.value} does not match {metric.source_field} = {round(float(value), 1)}"
+        )
     return None
 
 

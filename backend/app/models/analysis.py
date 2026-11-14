@@ -38,6 +38,8 @@ class AnalysisSession(Base):
     guard_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     vision_json: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     coach_feedback: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # The grounded CoachingReport (AGT-05); coach_feedback holds the same report as text
+    coaching_report: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     annotated_video_path: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     # Stage 1 poses cache (VIS-08); shared by every session of the same video
     poses_cache_path: Mapped[str | None] = mapped_column(Text, nullable=True)

@@ -68,6 +68,7 @@ class AnalysisSessionResponse(BaseModel):
     avg_velocity: float | None
     guard_score: float | None
     coach_feedback: str | None
+    coaching_report: dict[str, Any] | None = None
     annotated_video_path: str | None
     target_track_id: int | None = None
     stance_used: str | None = None

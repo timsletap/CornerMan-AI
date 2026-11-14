@@ -78,7 +78,7 @@ def record_llm_spend(
     session_id: uuid.UUID | None,
     usage: dict,
 ) -> None:
-    """Log one LLM call's actual cost (from coaching `_usage`). Skips calls that cost nothing."""
+    """Log one LLM call's actual cost (the coaching report's `usage`). Skips calls that cost nothing."""
     cost = float(usage.get("cost_usd", 0.0))
     if cost <= 0:
         return

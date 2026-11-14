@@ -126,6 +126,7 @@ export interface AnalysisSessionResponse {
   avg_velocity: number | null;
   guard_score: number | null;
   coach_feedback: string | null;
+  coaching_report?: CoachingReport | null;
   annotated_video_path: string | null;
   processing_started_at: string | null;
   processing_completed_at: string | null;
@@ -163,15 +164,35 @@ export interface ProgressResponse {
   detail: string;
 }
 
-export interface CoachingFeedback {
+/** The grounded report saved with each analysis (backend `CoachingReport`). */
+export interface CoachingReport {
   summary: string;
-  key_metric: string;
+  key_metric: { name: string; value: number; unit: string; source_field: string };
   one_thing: string;
-  prescribed_drill: { error_type: string; reasoning: string };
+  one_thing_evidence: string[];
+  prescribed_drill: { error_type: string; drill_id: string; reasoning: string };
+  notes: { text: string; t_ms: number | null; evidence_field: string }[];
+  /** Claims the grounding check dropped, with the reason. */
+  removed_claims: string[];
+  prompt_version: string;
+  /** Model id, or "fallback" for the basic report built without the model. */
+  model: string;
+  usage: { input_tokens: number; output_tokens: number; cost_usd: number };
+  /** Why this is a basic report, when the model was not used. */
+  note: string | null;
+}
+
+/** Reports saved before the structured format. */
+export interface LegacyCoachingFeedback {
+  summary: string;
+  key_metric: string | null;
+  one_thing: string | null;
+  prescribed_drill: { error_type: string; reasoning: string } | null;
   detailed_notes: string[];
-  /** Set when the basic (non-LLM) report was used, e.g. hourly spend cap reached. */
   _note?: string;
 }
+
+export type CoachingFeedback = CoachingReport | LegacyCoachingFeedback;
 
 export interface FeedbackResponse {
   id: string;

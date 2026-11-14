@@ -210,6 +210,7 @@ Key settings in `backend/.env`:
 | `TELEGRAPH_WINDOW_FRAMES` | 10 | Frames before the punch starts that are checked for a telegraph |
 | `ONSET_FRACTION` | 0.2 | A punch starts where wrist speed reaches this share of its peak |
 | `ANTHROPIC_API_KEY` | (empty) | Set for AI coaching |
+| `PROMPT_VERSION` | v1 | Coaching prompt file in `backend/app/coaching/prompts/` |
 | `SECRET_KEY` | (placeholder) | JWT signing key. With `APP_ENV=production` it must be at least 32 bytes and not the default, and `DEBUG` must be false |
 
 </details>

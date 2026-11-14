@@ -147,8 +147,7 @@ def pipeline(
     coach = MagicMock(
         return_value={
             "summary": "LLM report",
-            "mapped_drills": [],
-            "_usage": {"input_tokens": 1000, "output_tokens": 500, "cost_usd": 0.014},
+            "usage": {"input_tokens": 1000, "output_tokens": 500, "cost_usd": 0.014},
         }
     )
     monkeypatch.setattr(analysis_tasks, "generate_coaching_feedback", coach)
@@ -193,7 +192,9 @@ def test_over_hourly_spend_uses_fallback_but_keeps_vision_results(
     assert saved.vision_json == VISION_RESULT
     assert db.query(StrikeEvent).filter(StrikeEvent.session_id == sid).count() == 1
     report = json.loads(saved.coach_feedback)
-    assert report["_note"] == analysis_tasks.SPEND_CAP_NOTE
+    assert report["note"] == analysis_tasks.SPEND_CAP_NOTE
+    assert report["model"] == "fallback"
+    assert saved.coaching_report == report
     assert "Detected 1 strikes" in report["summary"]
     assert db.query(LlmSpend).count() == 1  # the fallback costs nothing
 
